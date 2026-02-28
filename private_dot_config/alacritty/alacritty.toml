@@ -3,8 +3,7 @@
 [window]
 dynamic_padding = true
 decorations = "none"
-padding = { x = 18, y = 18 }
-opacity = 0.99
+padding = { x = 10, y = 10 }
 dimensions = { columns = 110, lines = 30 }
 
 [font]

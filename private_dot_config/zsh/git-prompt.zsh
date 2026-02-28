@@ -5,8 +5,8 @@ zstyle ':vcs_info:*' enable git
 zstyle ':vcs_info:git:*' check-for-changes true
 zstyle ':vcs_info:git:*' unstagedstr '!'
 zstyle ':vcs_info:git:*' stagedstr '+'
-zstyle ':vcs_info:git:*' formats ' %F{180}(%b%u%c)%f'
-zstyle ':vcs_info:git:*' actionformats ' %F{203}(%b|%a%u%c)%f'
+zstyle ':vcs_info:git:*' formats ' %F{180}%b%u%c%f'
+zstyle ':vcs_info:git:*' actionformats ' %F{203}%b|%a%u%c%f'
 
 _git_ahead_behind() {
   command git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
@@ -21,15 +21,27 @@ _git_ahead_behind() {
   print -r -- "$out"
 }
 
+_git_untracked() {
+  command git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 0
+  command git ls-files --others --exclude-standard 2>/dev/null | head -n 1 | read -r _ || return 0
+  print -r -- "?"
+}
+
 _precmd_git_prompt() {
   vcs_info
-  local ab
+  local ab ut
   ab="$(_git_ahead_behind)"
+  ut="$(_git_untracked)"
+
+  # si hay untracked, lo mostramos pegado a la info del branch
+  local base="${vcs_info_msg_0_}"
+  [[ -n "$ut" ]] && base="${base}%F{180}${ut}%f"
 
   if [[ -n "$ab" ]]; then
-    RPROMPT="${vcs_info_msg_0_} %F{187}${ab}%f"
+    RPROMPT="${base} %F{187}${ab}%f"
   else
-    RPROMPT="${vcs_info_msg_0_}"
+    RPROMPT="${base}"
   fi
 }
+
 add-zsh-hook precmd _precmd_git_prompt
