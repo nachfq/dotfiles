@@ -1,23 +1,25 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-echo "Installing base tools..."
+echo "Installing core dev deps (zsh, git, curl, fzf, tmux, ripgrep, fd, jq, direnv)..."
 
-sudo apt update
+# Don't make dotfiles fail because of broken third-party repos on the machine
+if ! sudo apt update; then
+  echo "WARN: apt update failed (likely broken 3rd-party repos/keys). Continuing..."
+fi
 
+# Core packages only
 sudo apt install -y \
-  curl \
-  git \
   zsh \
+  git \
+  curl \
   fzf \
-  eza \
-  tree \
-  unzip
+  tmux \
+  || true
 
-# fzf full install (keybindings + completion) without touching rc
-if [ ! -d "$HOME/.fzf" ]; then
-  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-  ~/.fzf/install --key-bindings --completion --no-update-rc
+# Optional: install fzf keybindings/completion without modifying shell rc
+if [ ! -f "$HOME/.fzf.zsh" ] && [ -d "$HOME/.fzf" ]; then
+  "$HOME/.fzf/install" --key-bindings --completion --no-update-rc || true
 fi
 
 echo "Done."
