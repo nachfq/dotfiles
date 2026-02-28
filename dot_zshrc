@@ -1,0 +1,82 @@
+# Interactive zsh
+
+# ---- History ----
+HISTFILE=$HOME/.zsh_history
+HISTSIZE=20000
+SAVEHIST=20000
+
+setopt APPEND_HISTORY
+setopt INC_APPEND_HISTORY
+setopt SHARE_HISTORY
+
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_SAVE_NO_DUPS
+setopt HIST_REDUCE_BLANKS
+
+
+# ---- Aliases ----
+[ -f "$HOME/.config/zsh/aliases.zsh" ] && source "$HOME/.config/zsh/aliases.zsh"
+
+
+autoload -Uz compinit
+compinit
+
+setopt PROMPT_SUBST
+
+# Prompt (green dir + cream $)
+PROMPT='%F{green}[%1~]%f%F{229}$%f '
+
+# Git branch (right)
+autoload -Uz vcs_info
+zstyle ':vcs_info:git:*' formats ' %F{180}(%b)%f'
+precmd() { vcs_info }
+RPROMPT='${vcs_info_msg_0_}'
+
+# Aliases (your own, not OMZ)
+[ -f "$HOME/.config/zsh/aliases.zsh" ] && source "$HOME/.config/zsh/aliases.zsh"
+
+# fzf
+[ -f "$HOME/.fzf.zsh" ] && source "$HOME/.fzf.zsh"
+
+# nvm (interactive)
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+
+[[ "$TERM_PROGRAM" == "vscode" ]] && unset ARGV0
+
+# Extra completions (optional)
+[ -f "/home/ifq/.zsh/completion/_zkstack.zsh" ] && source "/home/ifq/.zsh/completion/_zkstack.zsh"
+[ -f "/home/ifq/.openclaw/completions/openclaw.zsh" ] && source "/home/ifq/.openclaw/completions/openclaw.zsh"
+
+# Bindings
+# ---- Keybindings (Ctrl+Arrows) ----
+bindkey -e  # emacs-style editing (lo normal)
+
+# Common sequences in xterm/alacritty:
+bindkey '^[[1;5D' backward-word   # Ctrl+Left
+bindkey '^[[1;5C' forward-word    # Ctrl+Right
+
+# Fallbacks (algunos términos envían estos):
+bindkey '^[[5D' backward-word
+bindkey '^[[5C' forward-word
+
+
+# ---- Completion UI ----
+zmodload zsh/complist
+
+autoload -Uz compinit
+compinit
+
+# LS_COLORS
+if command -v dircolors >/dev/null 2>&1; then
+  eval "$(dircolors -b)"
+fi
+
+# Make tab completion use a menu you can navigate with arrows
+zstyle ':completion:*' menu select
+
+# Colors in completion lists (uses your LS_COLORS)
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
+# Better matching
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'

@@ -1,0 +1,61 @@
+# ~/.config/alacritty/alacritty.toml
+
+[window]
+dynamic_padding = true
+decorations = "none"
+padding = { x = 18, y = 18 }
+opacity = 0.99
+dimensions = { columns = 110, lines = 30 }
+
+[font]
+size = 13
+
+[font.normal]
+family = "DejaVu Sans Mono"
+style = "Book"
+
+[font.bold]
+family = "DejaVu Sans Mono"
+style = "Bold"
+
+[font.italic]
+family = "DejaVu Sans Mono"
+style = "Oblique"
+
+[font.bold_italic]
+family = "DejaVu Sans Mono"
+style = "Bold Oblique"
+
+
+
+[colors.primary]
+background = "#1F1D1A"   # warm dark brown-gray
+foreground = "#E6D8C3"   # soft cream
+
+[colors.cursor]
+text = "#1F1D1A"
+cursor = "#E6D8C3"
+
+[colors.selection]
+text = "#1F1D1A"
+background = "#D8CBB8"
+
+[colors.normal]
+black   = "#2A2724"
+red     = "#C97A6D"   # muted terracotta
+green   = "#7C9A7E"   # sage green
+yellow  = "#D2B48C"   # sand
+blue    = "#8FA4B8"   # dusty blue (much softer)
+magenta = "#B39BC8"
+cyan    = "#8CBEB2"
+white   = "#E6D8C3"
+
+[colors.bright]
+black   = "#3A3531"
+red     = "#D89286"
+green   = "#9FBBA0"
+yellow  = "#E5CFA8"
+blue    = "#A6BDD1"
+magenta = "#C7B2DB"
+cyan    = "#A3D4CB"
+white   = "#F2E9DC"

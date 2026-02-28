@@ -1,0 +1,11 @@
+# Login env (TTY/SSH)
+
+export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
+export DOCKER_HOST="unix:///home/ifq/.docker/desktop/docker.sock"
+
+# tool dirs
+export NVM_DIR="$HOME/.nvm"
+export SDKMAN_DIR="$HOME/.sdkman"
+
+# your env exports
+[ -f "$HOME/.local/bin/env" ] && source "$HOME/.local/bin/env"
