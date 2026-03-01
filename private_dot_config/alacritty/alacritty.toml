@@ -10,22 +10,8 @@ dimensions = { columns = 110, lines = 30 }
 size = 13
 
 [font.normal]
-family = "DejaVu Sans Mono"
+family = "JetBrainsMono Nerd Font"
 style = "Book"
-
-[font.bold]
-family = "DejaVu Sans Mono"
-style = "Bold"
-
-[font.italic]
-family = "DejaVu Sans Mono"
-style = "Oblique"
-
-[font.bold_italic]
-family = "DejaVu Sans Mono"
-style = "Bold Oblique"
-
-
 
 [colors.primary]
 background = "#1F1D1A"   # warm dark brown-gray
