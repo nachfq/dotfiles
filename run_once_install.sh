@@ -26,13 +26,15 @@ if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
 fi
 
 # --- Install neovim (AppImage) ---
-NVIM_VER="0.10.4"
-NVIM_URL="https://github.com/neovim/neovim/releases/download/v${NVIM_VER}/nvim-linux-x86_64.appimage"
-
-echo "Installing nvim v${NVIM_VER}..."
+echo "Installing latest nvim (AppImage)..."
 mkdir -p "$HOME/.local/bin"
-curl -L -o "$HOME/.local/bin/nvim" "$NVIM_URL"
-chmod +x "$HOME/.local/bin/nvim"
+
+TMP="$(mktemp)"
+curl -L --fail -o "$TMP" \
+  "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage"
+
+chmod +x "$TMP"
+mv "$TMP" "$HOME/.local/bin/nvim"
 
 # --- Install JetBrainsMono Nerd Font (for devicons) ---
 if ! fc-list | grep -qi "JetBrainsMono Nerd Font"; then

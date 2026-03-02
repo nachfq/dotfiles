@@ -9,6 +9,7 @@ alias eenv="nvim ~/.zshenv && source ~/.zshenv"
 
 alias ealacritty="nvim ~/.config/alacritty/alacritty.toml"
 alias ezshrc="nvim ~/.zshrc && source ~/.zshrc"
+alias envim="cd ~/.config/nvim && nvim"
 
 ## ls colors
 alias ls='ls --color=auto'
@@ -33,3 +34,6 @@ BASE_IFQ_REPOS="/media/ifq/storage-linux/ifq/repos"
 BASE_COB_REPOS="/media/ifq/storage-linux/cobuilders.xyz/repos"
 alias stampr="cd $BASE_IFQ_REPOS/stampr"
 alias hhs="cd $BASE_COB_REPOS/hhs"
+
+### Shortcuts
+alias fcat='f(){ fd -HI -tf --follow --print0 "$1" "${2:-.}" | xargs -0 -r -I{} sh -c '\''printf "\n========== %s ==========\n" "$1"; cat "$1"'\'' _ {}; }; f'
