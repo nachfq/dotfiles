@@ -18,6 +18,25 @@ sudo apt install -y \
   fontconfig \
   || true
 
+
+# --- Tree-sitter CLI ---
+# Ubuntu's tree-sitter-cli can be too old for nvim-treesitter (missing `tree-sitter build`)
+# Install a recent one via npm.
+if ! command -v tree-sitter >/dev/null 2>&1; then
+  echo "Installing tree-sitter CLI (npm)..."
+  # Ensure node + npm exist
+  if ! command -v npm >/dev/null 2>&1; then
+    sudo apt install -y nodejs npm || true
+  fi
+  sudo npm install -g tree-sitter-cli
+else
+  # If tree-sitter exists but is old, upgrade via npm
+  echo "tree-sitter already present: $(tree-sitter --version || true)"
+  if command -v npm >/dev/null 2>&1; then
+    sudo npm install -g tree-sitter-cli
+  fi
+fi
+
 # Debian/Ubuntu/Mint: binary is often "fdfind" not "fd"
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
   echo "Creating fd -> fdfind symlink..."
@@ -35,6 +54,13 @@ curl -L --fail -o "$TMP" \
 
 chmod +x "$TMP"
 mv "$TMP" "$HOME/.local/bin/nvim"
+
+# --- Install lazygit (GitHub latest release) ---
+if ! command -v lazygit >/dev/null 2>&1; then
+  LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[0-9.]+')
+  curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+  sudo tar xf lazygit.tar.gz -C /usr/local/bin lazygit
+fi
 
 # --- Install JetBrainsMono Nerd Font (for devicons) ---
 if ! fc-list | grep -qi "JetBrainsMono Nerd Font"; then
