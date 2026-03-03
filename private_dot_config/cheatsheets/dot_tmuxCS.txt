@@ -1,0 +1,24 @@
+## TMUX CHEATSHEET
+### SESSIONS
+```bash
+Ctrl-b : new -s name   # new session
+Ctrl-b s               # switch session
+Ctrl-b d               # detach
+```
+### WINDOWS
+```bash
+Ctrl-b c   # new window
+Ctrl-b n   # next window
+Ctrl-b p   # previous window
+Ctrl-b 1   # go to window by number
+Ctrl-b ,   # rename window
+Ctrl-b &   # kill window
+```
+### PANES
+```bash
+Ctrl-b %     # split vertical
+Ctrl-b "     # split horizontal
+Ctrl-b arrows # move between panes
+Ctrl-b x     # kill pane
+Ctrl-b z     # toggle zoom
+```
