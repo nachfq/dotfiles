@@ -91,5 +91,5 @@ if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
   "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
 fi
 
-
+echo 'To make zsh your default shell, run: chsh -s "$(which zsh)"'
 echo "Done."
