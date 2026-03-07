@@ -81,4 +81,15 @@ if [ ! -d "$HOME/.fzf" ]; then
   "$HOME/.fzf/install" --all --no-update-rc
 fi
 
+# --- Install tmux plugin manager (TPM) ---
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+  echo "Installing TPM..."
+  git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+fi
+if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+  echo "Installing tmux plugins from ~/.tmux.conf..."
+  "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
+fi
+
+
 echo "Done."

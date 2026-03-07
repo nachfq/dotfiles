@@ -32,8 +32,19 @@ alias cpy="xclip -sel clip"
 ### Projects
 BASE_IFQ_REPOS="/media/ifq/storage-linux/ifq/repos"
 BASE_COB_REPOS="/media/ifq/storage-linux/cobuilders.xyz/repos"
+alias cdcob='cd $BASE_COB_REPOS' 
+alias cdfq='cd $BASE_IFQ_REPOS'
+
 alias stampr="cd $BASE_IFQ_REPOS/stampr"
 alias hhs="cd $BASE_COB_REPOS/hardhat-plugin-research/hardhat-arbitrum-stylus"
 
+
+
 ### Shortcuts
-alias fcat='f(){ fd -HI -tf --follow --print0 "$1" "${2:-.}" | xargs -0 -r -I{} sh -c '\''printf "\n========== %s ==========\n" "$1"; cat "$1"'\'' _ {}; }; f'
+
+alias fcat='f(){ 
+  fd -HI -tf --follow . "${1:-.}" --print0 \
+  | xargs -0 -r -I{} sh -c '\''printf "\n========== %s ==========\n" "$1"; cat "$1"'\'' _ {}; 
+}; f'
+
+alias cheats='fcat ~/.config/cheatsheets'
