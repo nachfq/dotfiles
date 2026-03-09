@@ -44,16 +44,23 @@ if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
   ln -sf "$(command -v fdfind)" "$HOME/.local/bin/fd"
 fi
 
-# --- Install neovim (AppImage) ---
-echo "Installing latest nvim (AppImage)..."
-mkdir -p "$HOME/.local/bin"
+# --- Install neovim (official tarball, no AppImage/FUSE) ---
+echo "Installing latest nvim (tarball)..."
+mkdir -p "$HOME/.local/opt" "$HOME/.local/bin"
 
-TMP="$(mktemp)"
-curl -L --fail -o "$TMP" \
-  "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage"
+NVIM_DIR="$HOME/.local/opt/nvim"
+TMPDIR="$(mktemp -d)"
 
-chmod +x "$TMP"
-mv "$TMP" "$HOME/.local/bin/nvim"
+curl -L --fail -o "$TMPDIR/nvim.tar.gz" \
+  "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz"
+
+rm -rf "$NVIM_DIR"
+tar -xzf "$TMPDIR/nvim.tar.gz" -C "$TMPDIR"
+mv "$TMPDIR/nvim-linux-x86_64" "$NVIM_DIR"
+ln -sf "$NVIM_DIR/bin/nvim" "$HOME/.local/bin/nvim"
+
+rm -rf "$TMPDIR"
+hash -r
 
 # --- Install lazygit (GitHub latest release) ---
 if ! command -v lazygit >/dev/null 2>&1; then
