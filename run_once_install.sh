@@ -19,23 +19,23 @@ sudo apt install -y \
   || true
 
 
-# --- Tree-sitter CLI ---
-# Ubuntu's tree-sitter-cli can be too old for nvim-treesitter (missing `tree-sitter build`)
-# Install a recent one via npm.
-if ! command -v tree-sitter >/dev/null 2>&1; then
-  echo "Installing tree-sitter CLI (npm)..."
-  # Ensure node + npm exist
-  if ! command -v npm >/dev/null 2>&1; then
-    sudo apt install -y nodejs npm || true
-  fi
-  sudo npm install -g tree-sitter-cli
+mkdir -p "$HOME/.local/bin" "$HOME/.local/opt"
+
+# --- Install latest Node.js LTS + npm (NodeSource) ---
+echo "Installing latest Node.js LTS + npm..."
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+  sudo apt install -y nodejs
 else
-  # If tree-sitter exists but is old, upgrade via npm
-  echo "tree-sitter already present: $(tree-sitter --version || true)"
-  if command -v npm >/dev/null 2>&1; then
-    sudo npm install -g tree-sitter-cli
-  fi
+  echo "Node already present: $(node --version)"
+  echo "npm already present: $(npm --version)"
 fi
+
+# --- Tree-sitter CLI ---
+# Install/upgrade via npm, but NEVER try to install node here.
+echo "Installing/upgrading tree-sitter CLI..."
+npm install -g tree-sitter-cli
+echo "tree-sitter version: $(tree-sitter --version || true)"
 
 # Debian/Ubuntu/Mint: binary is often "fdfind" not "fd"
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
@@ -46,8 +46,6 @@ fi
 
 # --- Install neovim (official tarball, no AppImage/FUSE) ---
 echo "Installing latest nvim (tarball)..."
-mkdir -p "$HOME/.local/opt" "$HOME/.local/bin"
-
 NVIM_DIR="$HOME/.local/opt/nvim"
 TMPDIR="$(mktemp -d)"
 
