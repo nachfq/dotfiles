@@ -1,11 +1,11 @@
-# Login env (TTY/SSH)
+# ~/.zprofile
+# Login environment (TTY / SSH)
 
-export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
-export DOCKER_HOST="unix:///home/$USER/.docker/desktop/docker.sock"
-
-# tool dirs
+export PATH="$HOME/.local/bin:$PATH"
 export NVM_DIR="$HOME/.nvm"
-export SDKMAN_DIR="$HOME/.sdkman"
 
-# your env exports
-[ -f "$HOME/.local/bin/env" ] && source "$HOME/.local/bin/env"
+[[ -f "$HOME/.local/bin/env" ]] && source "$HOME/.local/bin/env"
+
+if [[ -S "$HOME/.docker/desktop/docker.sock" ]]; then
+  export DOCKER_HOST="unix://$HOME/.docker/desktop/docker.sock"
+fi
