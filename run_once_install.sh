@@ -98,5 +98,15 @@ if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
   "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
 fi
 
+# --- DevContainer CLI ---
+if ! command -v devcontainer >/dev/null 2>&1; then
+  echo "Installing DevContainer CLI..."
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "Installing Node.js + npm..."
+    sudo apt-get install -y nodejs npm
+  fi
+  sudo npm install -g @devcontainers/cli
+fi
+
 echo 'To make zsh your default shell, run: chsh -s "$(which zsh)"'
 echo "Done."
