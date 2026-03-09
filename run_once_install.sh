@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing core dev deps (zsh, git, curl, tmux, fd, nvim, fonts)..."
+echo "Installing core dev deps (zsh, git, curl, tmux, fd, unzip, fontconfig)..."
 
 if ! sudo apt update; then
   echo "WARN: apt update failed. Continuing..."
@@ -16,8 +16,10 @@ sudo apt install -y \
   libfuse2 \
   unzip \
   fontconfig \
+  ca-certificates \
+  gnupg \
+  lsb-release \
   || true
-
 
 mkdir -p "$HOME/.local/bin" "$HOME/.local/opt"
 
@@ -32,7 +34,6 @@ else
 fi
 
 # --- Tree-sitter CLI ---
-# Install/upgrade via npm, but NEVER try to install node here.
 echo "Installing/upgrading tree-sitter CLI..."
 sudo npm install -g tree-sitter-cli
 echo "tree-sitter version: $(tree-sitter --version || true)"
@@ -40,42 +41,89 @@ echo "tree-sitter version: $(tree-sitter --version || true)"
 # Debian/Ubuntu/Mint: binary is often "fdfind" not "fd"
 if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
   echo "Creating fd -> fdfind symlink..."
-  mkdir -p "$HOME/.local/bin"
   ln -sf "$(command -v fdfind)" "$HOME/.local/bin/fd"
 fi
 
-# --- Install neovim (official tarball, no AppImage/FUSE) ---
-echo "Installing latest nvim (tarball)..."
-NVIM_DIR="$HOME/.local/opt/nvim"
-TMPDIR="$(mktemp -d)"
+# --- Install Docker Engine + Docker Compose plugin ---
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Installing Docker Engine + Compose plugin..."
 
-curl -L --fail -o "$TMPDIR/nvim.tar.gz" \
-  "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz"
+  sudo install -m 0755 -d /etc/apt/keyrings
+  if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+  fi
 
-rm -rf "$NVIM_DIR"
-tar -xzf "$TMPDIR/nvim.tar.gz" -C "$TMPDIR"
-mv "$TMPDIR/nvim-linux-x86_64" "$NVIM_DIR"
-ln -sf "$NVIM_DIR/bin/nvim" "$HOME/.local/bin/nvim"
+  if [ ! -f /etc/apt/sources.list.d/docker.list ]; then
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+      https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+  fi
 
-rm -rf "$TMPDIR"
-hash -r
+  sudo apt update
+  sudo apt install -y \
+    docker-ce \
+    docker-ce-cli \
+    containerd.io \
+    docker-buildx-plugin \
+    docker-compose-plugin
+
+  sudo usermod -aG docker "$USER" || true
+else
+  echo "Docker already present: $(docker --version)"
+  if docker compose version >/dev/null 2>&1; then
+    echo "Docker Compose plugin already present: $(docker compose version)"
+  else
+    echo "Installing missing Docker Compose plugin..."
+    sudo apt update
+    sudo apt install -y docker-compose-plugin
+  fi
+fi
+
+# --- Install neovim (official tarball, skip if already installed) ---
+if ! command -v nvim >/dev/null 2>&1; then
+  echo "Installing latest nvim (tarball)..."
+  NVIM_DIR="$HOME/.local/opt/nvim"
+  TMPDIR="$(mktemp -d)"
+
+  curl -L --fail -o "$TMPDIR/nvim.tar.gz" \
+    "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz"
+
+  rm -rf "$NVIM_DIR"
+  tar -xzf "$TMPDIR/nvim.tar.gz" -C "$TMPDIR"
+  mv "$TMPDIR/nvim-linux-x86_64" "$NVIM_DIR"
+  ln -sf "$NVIM_DIR/bin/nvim" "$HOME/.local/bin/nvim"
+
+  rm -rf "$TMPDIR"
+  hash -r
+else
+  echo "nvim already present: $(nvim --version | head -n 1)"
+fi
 
 # --- Install lazygit (GitHub latest release) ---
 if ! command -v lazygit >/dev/null 2>&1; then
-  LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[0-9.]+')
-  curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-  sudo tar xf lazygit.tar.gz -C /usr/local/bin lazygit
+  echo "Installing lazygit..."
+  LAZYGIT_VERSION="$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -Po '"tag_name": "v\K[0-9.]+')"
+  TMP_LG="$(mktemp -d)"
+  curl -Lo "$TMP_LG/lazygit.tar.gz" \
+    "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+  sudo tar xf "$TMP_LG/lazygit.tar.gz" -C /usr/local/bin lazygit
+  rm -rf "$TMP_LG"
 fi
 
-# --- Install JetBrainsMono Nerd Font (for devicons) ---
-if ! fc-list | grep -qi "JetBrainsMono Nerd Font"; then
+# --- Install JetBrainsMono Nerd Font (skip if already installed) ---
+if find "$HOME/.local/share/fonts" -type f \( -iname "*JetBrainsMono*Nerd*Font*.ttf" -o -iname "*JetBrainsMono*Nerd*Font*.otf" \) | grep -q .; then
+  echo "JetBrainsMono Nerd Font already installed."
+else
   echo "Installing JetBrainsMono Nerd Font..."
   mkdir -p "$HOME/.local/share/fonts"
-  tmpdir="$(mktemp -d)"
-  curl -L -o "$tmpdir/JetBrainsMono.zip" \
+  TMP_FONT="$(mktemp -d)"
+  curl -L -o "$TMP_FONT/JetBrainsMono.zip" \
     "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"
-  unzip -o "$tmpdir/JetBrainsMono.zip" -d "$HOME/.local/share/fonts" >/dev/null
-  rm -rf "$tmpdir"
+  unzip -o "$TMP_FONT/JetBrainsMono.zip" -d "$HOME/.local/share/fonts" >/dev/null
+  rm -rf "$TMP_FONT"
   fc-cache -f >/dev/null
 fi
 
@@ -100,9 +148,10 @@ fi
 if ! command -v devcontainer >/dev/null 2>&1; then
   echo "Installing DevContainer CLI..."
   curl -fsSL https://raw.githubusercontent.com/devcontainers/cli/main/scripts/install.sh | sh
-  mkdir -p "$HOME/.local/bin"
   ln -sf "$HOME/.devcontainers/bin/devcontainer" "$HOME/.local/bin/devcontainer"
 fi
 
+echo
 echo 'To make zsh your default shell, run: chsh -s "$(which zsh)"'
+echo "If Docker was just installed, log out/in or run: newgrp docker"
 echo "Done."
