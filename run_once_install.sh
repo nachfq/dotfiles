@@ -45,7 +45,16 @@ if command -v fdfind >/dev/null 2>&1 && ! command -v fd >/dev/null 2>&1; then
 fi
 
 # --- Install Docker Engine + Docker Compose plugin ---
-if ! command -v docker >/dev/null 2>&1; then
+is_container() {
+  [[ -f /.dockerenv ]] && return 0
+  grep -qaE '(docker|containerd|kubepods|podman|lxc)' /proc/1/cgroup 2>/dev/null && return 0
+  return 1
+}
+
+# --- Install Docker Engine + Docker Compose plugin ---
+if is_container; then
+  echo "Container detected, skipping Docker Engine + Compose install..."
+elif ! command -v docker >/dev/null 2>&1; then
   echo "Installing Docker Engine + Compose plugin..."
 
   sudo install -m 0755 -d /etc/apt/keyrings
