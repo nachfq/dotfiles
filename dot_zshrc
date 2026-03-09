@@ -13,7 +13,8 @@ for f in \
   "$HOME/.config/zsh/aliases.zsh" \
   "$HOME/.config/zsh/private-aliases.zsh" \
   "$HOME/.config/zsh/tools.zsh" \
-  "$HOME/.config/zsh/private-tools.zsh"
+  "$HOME/.config/zsh/private-tools.zsh" \
+  "$HOME/.config/zsh/private-configs.zsh"
 do
   [ -f "$f" ] && source "$f"
 done
