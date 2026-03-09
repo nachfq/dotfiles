@@ -21,24 +21,8 @@ alias docker-compose="docker compose"
 alias python=python3
 alias nv=nvim
 
-### OpenClaw
-alias oc_ssh_tunnel="ssh -L 18789:127.0.0.1:18789 nacho@192.168.1.46"
-alias oc_rdp="xfreerdp /v:192.168.1.46:3389 /u:nacho"
-
 ### Utils
 alias cpy="xclip -sel clip"
-
-
-### Projects
-BASE_IFQ_REPOS="/media/ifq/storage-linux/ifq/repos"
-BASE_COB_REPOS="/media/ifq/storage-linux/cobuilders.xyz/repos"
-alias cdcob='cd $BASE_COB_REPOS' 
-alias cdfq='cd $BASE_IFQ_REPOS'
-
-alias stampr="cd $BASE_IFQ_REPOS/stampr"
-alias hhs="cd $BASE_COB_REPOS/hardhat-plugin-research/hardhat-arbitrum-stylus"
-
-
 
 ### Shortcuts
 

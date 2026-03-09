@@ -11,6 +11,7 @@ for f in \
   "$HOME/.config/zsh/prompt.zsh" \
   "$HOME/.config/zsh/git-prompt.zsh" \
   "$HOME/.config/zsh/aliases.zsh" \
+  "$HOME/.config/zsh/private-aliases.zsh" \
   "$HOME/.config/zsh/tools.zsh"
 do
   [ -f "$f" ] && source "$f"
