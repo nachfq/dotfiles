@@ -1,4 +1,4 @@
-# ~/.zshrc (loader)
+#~/.zshrc (loader)
 
 # Core interactive opts
 setopt PROMPT_SUBST
@@ -12,7 +12,8 @@ for f in \
   "$HOME/.config/zsh/git-prompt.zsh" \
   "$HOME/.config/zsh/aliases.zsh" \
   "$HOME/.config/zsh/private-aliases.zsh" \
-  "$HOME/.config/zsh/tools.zsh"
+  "$HOME/.config/zsh/tools.zsh" \
+  "$HOME/.config/zsh/private-tools.zsh"
 do
   [ -f "$f" ] && source "$f"
 done
