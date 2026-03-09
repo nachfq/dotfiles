@@ -34,7 +34,7 @@ fi
 # --- Tree-sitter CLI ---
 # Install/upgrade via npm, but NEVER try to install node here.
 echo "Installing/upgrading tree-sitter CLI..."
-npm install -g tree-sitter-cli
+sudo npm install -g tree-sitter-cli
 echo "tree-sitter version: $(tree-sitter --version || true)"
 
 # Debian/Ubuntu/Mint: binary is often "fdfind" not "fd"
