@@ -101,11 +101,9 @@ fi
 # --- DevContainer CLI ---
 if ! command -v devcontainer >/dev/null 2>&1; then
   echo "Installing DevContainer CLI..."
-  if ! command -v npm >/dev/null 2>&1; then
-    echo "Installing Node.js + npm..."
-    sudo apt-get install -y nodejs npm
-  fi
-  sudo npm install -g @devcontainers/cli
+  curl -fsSL https://raw.githubusercontent.com/devcontainers/cli/main/scripts/install.sh | sh
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$HOME/.devcontainers/bin/devcontainer" "$HOME/.local/bin/devcontainer"
 fi
 
 echo 'To make zsh your default shell, run: chsh -s "$(which zsh)"'
