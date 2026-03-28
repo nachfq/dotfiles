@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "Installing core dev deps (zsh, git, curl, tmux, fd, unzip, fontconfig)..."
+echo "Installing core dev deps (zsh, git, curl, tmux, fd, ripgrep, unzip, fontconfig)..."
 
 if ! sudo apt update; then
   echo "WARN: apt update failed. Continuing..."
@@ -13,6 +13,7 @@ sudo apt install -y \
   curl \
   tmux \
   fd-find \
+  ripgrep \
   libfuse2 \
   unzip \
   fontconfig \
