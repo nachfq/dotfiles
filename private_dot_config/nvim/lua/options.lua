@@ -72,6 +72,8 @@ vim.api.nvim_create_autocmd({ "VimEnter", "WinEnter", "BufEnter" }, {
   callback = refresh_window_focus,
 })
 
+vim.keymap.set("n", "<leader>nh", "<cmd>nohlsearch<CR>", { desc = "clear search highlight" })
+
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI", "TermClose", "TermLeave" }, {
   group = autoread_group,
   callback = function()
