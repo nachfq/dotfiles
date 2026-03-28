@@ -30,14 +30,41 @@ vim.opt.termguicolors = true
 vim.cmd.colorscheme("habamax")
 vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "WinSeparator", { fg = "#3A3531", bg = "NONE" })
+vim.api.nvim_set_hl(0, "VertSplit", { fg = "#3A3531", bg = "NONE" })
+vim.api.nvim_set_hl(0, "StatusLine", { fg = "#E6D8C3", bg = "#2A2724" })
+vim.api.nvim_set_hl(0, "StatusLineNC", { fg = "#8C847A", bg = "#2A2724" })
+vim.api.nvim_set_hl(0, "CursorLine", { bg = "#2A2724" })
+vim.api.nvim_set_hl(0, "CursorLineNr", { fg = "#F2E9DC", bold = true })
+vim.api.nvim_set_hl(0, "WinBar", { fg = "#8a8a8a", bg = "NONE" })
+vim.api.nvim_set_hl(0, "WinBarNC", { fg = "#5a5a5a", bg = "NONE" })
+vim.opt.laststatus = 3
 
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.clipboard = "unnamedplus"
 vim.opt.autoread = true
 vim.opt.updatetime = 200
+vim.opt.cursorline = true
+vim.opt.fillchars = { vert = "│", horiz = "─" }
 
 local autoread_group = vim.api.nvim_create_augroup("ExternalFileAutoread", { clear = true })
+local focus_group = vim.api.nvim_create_augroup("FocusedWindowCursorline", { clear = true })
+
+vim.api.nvim_create_autocmd({ "VimEnter", "WinEnter", "BufEnter" }, {
+  group = focus_group,
+  callback = function()
+    vim.opt_local.cursorline = true
+  end,
+})
+
+vim.api.nvim_create_autocmd("WinLeave", {
+  group = focus_group,
+  callback = function()
+    vim.opt_local.cursorline = false
+  end,
+})
 
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI", "TermClose", "TermLeave" }, {
   group = autoread_group,
