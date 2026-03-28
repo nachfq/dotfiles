@@ -28,10 +28,10 @@ vim.g.maplocalleader = "\\"
 vim.opt.termguicolors = true
 
 vim.cmd.colorscheme("habamax")
-vim.api.nvim_set_hl(0, "Normal", { bg = "#1F1D1A" })
+vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "NormalNC", { bg = "#24211E" })
-vim.api.nvim_set_hl(0, "ActivePane", { bg = "#1F1D1A" })
+vim.api.nvim_set_hl(0, "ActivePane", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "InactivePane", { bg = "#24211E" })
 vim.api.nvim_set_hl(0, "WinSeparator", { fg = "#3A3531", bg = "NONE" })
 vim.api.nvim_set_hl(0, "VertSplit", { fg = "#3A3531", bg = "NONE" })
