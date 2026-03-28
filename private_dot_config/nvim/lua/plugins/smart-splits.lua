@@ -18,6 +18,9 @@ return {
       vim.keymap.set("n", "<M-j>", smart_splits.resize_down, { desc = "resize split down" })
       vim.keymap.set("n", "<M-k>", smart_splits.resize_up, { desc = "resize split up" })
       vim.keymap.set("n", "<M-l>", smart_splits.resize_right, { desc = "resize split right" })
+
+      vim.keymap.set("n", "<leader>v", "<C-w>v", { desc = "vertical split" })
+      vim.keymap.set("n", "<leader>h", "<C-w>s", { desc = "horizontal split" })
     end,
   },
 }
