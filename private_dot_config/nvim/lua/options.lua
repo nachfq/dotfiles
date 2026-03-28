@@ -28,9 +28,11 @@ vim.g.maplocalleader = "\\"
 vim.opt.termguicolors = true
 
 vim.cmd.colorscheme("habamax")
-vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "Normal", { bg = "#1F1D1A" })
 vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "NormalNC", { bg = "#24211E" })
+vim.api.nvim_set_hl(0, "ActivePane", { bg = "#1F1D1A" })
+vim.api.nvim_set_hl(0, "InactivePane", { bg = "#24211E" })
 vim.api.nvim_set_hl(0, "WinSeparator", { fg = "#3A3531", bg = "NONE" })
 vim.api.nvim_set_hl(0, "VertSplit", { fg = "#3A3531", bg = "NONE" })
 vim.api.nvim_set_hl(0, "StatusLine", { fg = "#E6D8C3", bg = "#2A2724" })
@@ -52,18 +54,22 @@ vim.opt.fillchars = { vert = "│", horiz = "─" }
 local autoread_group = vim.api.nvim_create_augroup("ExternalFileAutoread", { clear = true })
 local focus_group = vim.api.nvim_create_augroup("FocusedWindowCursorline", { clear = true })
 
+local function refresh_window_focus()
+  local current = vim.api.nvim_get_current_win()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if win == current then
+      vim.wo[win].cursorline = true
+      vim.wo[win].winhighlight = "Normal:ActivePane,NormalNC:InactivePane"
+    else
+      vim.wo[win].cursorline = false
+      vim.wo[win].winhighlight = "Normal:InactivePane,NormalNC:InactivePane"
+    end
+  end
+end
+
 vim.api.nvim_create_autocmd({ "VimEnter", "WinEnter", "BufEnter" }, {
   group = focus_group,
-  callback = function()
-    vim.opt_local.cursorline = true
-  end,
-})
-
-vim.api.nvim_create_autocmd("WinLeave", {
-  group = focus_group,
-  callback = function()
-    vim.opt_local.cursorline = false
-  end,
+  callback = refresh_window_focus,
 })
 
 vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI", "TermClose", "TermLeave" }, {
