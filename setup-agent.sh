@@ -6,13 +6,16 @@ config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 usage() {
   cat <<'HELP'
-Usage: ./setup-agent.sh [apply|install-tools|install-codex|configure-codex|install-herdr|plugins]
+Usage: ./setup-agent.sh [apply|install-tools|install-runtimes|grant-sudo|install-codex|configure-codex|install-herdr|plugins]
 
   apply          Link Neovim, Herdr, Starship and Bash configuration.
                  Add a single source line to .bashrc for the shared shell setup.
                  Existing files are backed up before replacement. (Default.)
   install-tools  Install development tools and gh on Ubuntu Linux x86_64.
                  Requires root or sudo; does not apply user configuration.
+  install-runtimes  Install mise, Node LTS/npm and uv as the regular user.
+  grant-sudo     Allow dev to install packages without a password inside Incus.
+                 Run as root inside the disposable environment only.
   install-codex  Install/update Codex using the official installer as this user.
   configure-codex  Default Codex to full access without approval prompts (YOLO).
                    Run only inside the disposable agent environment.
@@ -80,12 +83,16 @@ install_tools() {
   fi
   "${root[@]}" apt-get update -qq
   "${root[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq bash-completion eza bubblewrap apparmor
+    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq bash-completion eza bubblewrap apparmor \
+    fzf bat zoxide btop rsync pkgconf sudo openssh-server
   "${root[@]}" install -m 644 "$repo_dir/config/apparmor/dotfiles-bwrap" /etc/apparmor.d/dotfiles-bwrap
   "${root[@]}" /sbin/apparmor_parser -r /etc/apparmor.d/dotfiles-bwrap
   "${root[@]}" install -d /opt /usr/local/bin
   if ! command -v fd >/dev/null; then
     "${root[@]}" ln -s /usr/bin/fdfind /usr/local/bin/fd
+  fi
+  if ! command -v bat >/dev/null; then
+    "${root[@]}" ln -s /usr/bin/batcat /usr/local/bin/bat
   fi
 
   download_dir=$(mktemp -d)
@@ -95,6 +102,17 @@ install_tools() {
     curl --fail --silent --show-error --location --retry 3 "$url" -o "$download_dir/$name"
     printf '%s  %s\n' "$checksum" "$download_dir/$name" | sha256sum --check --status
   }
+
+  if ! command -v dua >/dev/null; then
+    fetch dua.tar.gz \
+      https://github.com/Byron/dua-cli/releases/download/v3.0.0/dua-v3.0.0-x86_64-unknown-linux-musl.tar.gz \
+      59438b0934a521dd4cf2896fa42046023df60e1c25812a07cef913dc2b2d103f
+    mkdir "$download_dir/dua"
+    tar -xzf "$download_dir/dua.tar.gz" -C "$download_dir/dua"
+    local dua_binary
+    dua_binary=$(find "$download_dir/dua" -type f -name dua -print -quit)
+    "${root[@]}" install -m 755 "$dua_binary" /usr/local/bin/dua
+  fi
 
   if [[ $(nvim --version 2>/dev/null | sed -n '1p' || true) != 'NVIM v0.12.6' ]]; then
     fetch nvim.tar.gz \
@@ -117,16 +135,6 @@ install_tools() {
     tar -xzf "$download_dir/lazygit.tar.gz" -C "$download_dir" lazygit
     "${root[@]}" install -m 755 "$download_dir/lazygit" /usr/local/bin/lazygit
   fi
-  if [[ $(node --version 2>/dev/null || true) != v24.22.2 ]]; then
-    fetch node.tar.xz \
-      https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-x64.tar.xz \
-      48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75
-    "${root[@]}" tar -xJf "$download_dir/node.tar.xz" -C /opt
-    local name
-    for name in node npm npx; do
-      "${root[@]}" ln -sfn "/opt/node-v24.22.2-linux-x64/bin/$name" "/usr/local/bin/$name"
-    done
-  fi
   if [[ $(starship --version 2>/dev/null | sed -n '1p' || true) != 'starship 1.27.0' ]]; then
     fetch starship.tar.gz \
       https://github.com/starship/starship/releases/download/v1.27.0/starship-x86_64-unknown-linux-musl.tar.gz \
@@ -141,7 +149,32 @@ install_tools() {
     tar -xzf "$download_dir/gh.tar.gz" -C "$download_dir" gh_2.103.3_linux_amd64/bin/gh
     "${root[@]}" install -m 755 "$download_dir/gh_2.103.3_linux_amd64/bin/gh" /usr/local/bin/gh
   fi
-  printf 'Installed development tools. Run apply, install-codex, install-herdr and plugins as your regular user.\n'
+  printf 'Installed development tools. Run apply, install-runtimes, install-codex, configure-codex, install-herdr and plugins as your regular user.\n'
+}
+
+install_runtimes() {
+  if (( EUID == 0 )); then
+    printf 'Run install-runtimes as the environment user, not root.\n' >&2
+    exit 1
+  fi
+  curl -fsSL https://mise.run | sh
+  curl -LsSf https://astral.sh/uv/install.sh | UV_NO_MODIFY_PATH=1 sh
+  export PATH="$HOME/.local/bin:${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:$PATH"
+  mise use --global node@lts
+}
+
+grant_sudo() {
+  if (( EUID != 0 )) || [[ ! -d /dev/incus ]]; then
+    printf 'Run grant-sudo as root inside an Incus environment.\n' >&2
+    exit 1
+  fi
+  id dev >/dev/null
+  local policy
+  policy=$(mktemp)
+  printf 'dev ALL=(ALL:ALL) NOPASSWD: ALL\n' > "$policy"
+  visudo -cf "$policy"
+  install -m 440 "$policy" /etc/sudoers.d/90-agent-dev
+  rm -- "$policy"
 }
 
 install_codex() {
@@ -182,6 +215,8 @@ prepare_spelling() (
 case "${1:-apply}" in
   apply) apply_config ;;
   install-tools) install_tools ;;
+  install-runtimes) install_runtimes ;;
+  grant-sudo) grant_sudo ;;
   install-codex) install_codex ;;
   configure-codex)
     if (( EUID == 0 )); then

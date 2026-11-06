@@ -5,6 +5,12 @@ case ":$PATH:" in
   *":$HOME/.local/bin:"*) ;;
   *) export PATH="$HOME/.local/bin:$PATH" ;;
 esac
+if command -v mise >/dev/null; then
+  eval "$(mise activate bash)"
+fi
+if command -v zoxide >/dev/null; then
+  eval "$(zoxide init bash)"
+fi
 
 shopt -s histappend checkwinsize
 HISTCONTROL=ignoreboth
