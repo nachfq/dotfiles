@@ -90,7 +90,9 @@ def save_connection(name, address, public_host_key):
             shutil.copy2(config, STATE / f"ssh-config-{time.time_ns()}.backup")
         write_private(config, include + "\n\n" + original)
     target = "agent-" + name
-    state = {"target": target, "ip": address, "host_key": public_host_key,
+    state_file = STATE / f"{name}.json"
+    previous = json.loads(state_file.read_text()) if state_file.exists() else {}
+    state = {**previous, "target": target, "ip": address, "host_key": public_host_key,
              "host": HOST, "label": "homelab / " + name}
     STATE.mkdir(parents=True, exist_ok=True)
     write_private(STATE / f"{name}.json", json.dumps(state, indent=2) + "\n")
@@ -123,6 +125,48 @@ def herdr(*args, machine=None):
     return json.loads(output) if output else None
 
 
+def ensure_server(target):
+    status = run(["ssh", "-o", "BatchMode=yes", target, "/home/dev/.local/bin/herdr status server"])
+    if "status: running" in status:
+        return False
+    command = ('nohup /home/dev/.local/bin/herdr server '
+               '>/home/dev/.config/herdr/server-start.log 2>&1 </dev/null &')
+    run(["ssh", "-o", "BatchMode=yes", target, shlex.join(["sh", "-c", command])])
+    for _ in range(30):
+        status = run(["ssh", "-o", "BatchMode=yes", target, "/home/dev/.local/bin/herdr status server"])
+        if "status: running" in status:
+            return True
+        time.sleep(0.2)
+    raise RuntimeError("Herdr did not start. Inspect ~/.config/herdr/server-start.log in the environment.")
+
+
+def start_project_panes(state, machine):
+    left, right = state["left_pane"], state["right_pane"]
+    available = []
+    for pane in (left, right):
+        info = herdr("pane", "process-info", "--pane", pane, machine=machine)["result"]["process_info"]
+        processes = info.get("foreground_processes", [])
+        if processes and all(p["name"] in ("bash", "zsh", "fish") for p in processes):
+            available.append(pane)
+    if right in available:
+        herdr("pane", "run", right, "nvim .", machine=machine)
+    if left not in available:
+        return
+    authed = subprocess.run(["ssh", "-o", "BatchMode=yes", state["target"],
+                             "/home/dev/.local/bin/codex login status"],
+                            capture_output=True).returncode == 0
+    if authed:
+        herdr("agent", "start", "main", "--kind", "codex", "--pane", left,
+              "--timeout", "20000", "--", "--yolo", machine=machine)
+    else:
+        message = ("Entorno listo. Logins propios de este entorno:\n"
+                   "  gh auth login --hostname github.com --git-protocol https --web --skip-ssh-key\n"
+                   "  gh auth setup-git --hostname github.com\n"
+                   "  codex login --device-auth\n"
+                   "Despues ejecuta: codex\n")
+        herdr("pane", "run", left, "printf %s " + shlex.quote(message), machine=machine)
+
+
 def connect(name):
     item = managed(name)
     instance = item["name"]
@@ -132,30 +176,34 @@ def connect(name):
     # The host key is obtained through the trusted host + Incus channel.
     host_key = incus("exec", instance, "--", "cat", "/etc/ssh/ssh_host_ed25519_key.pub")
     state = save_connection(name, address, host_key)
-    # Herdr's native setup also starts the remote server after an environment reboot.
-    run(["herdr", "machine", "add", state["target"], "--label", state["label"]])
+    profiles = json.loads(run(["herdr", "machine", "list", "--json"]))
+    matching = [p for p in profiles if p["target"] == state["target"] and p["label"] == state["label"]]
+    revived = False
+    if matching:
+        revived = ensure_server(state["target"])
+    else:
+        run(["herdr", "machine", "add", state["target"], "--label", state["label"]])
+        profiles = json.loads(run(["herdr", "machine", "list", "--json"]))
+        matching = [p for p in profiles if p["target"] == state["target"] and p["label"] == state["label"]]
+    if len(matching) != 1:
+        raise RuntimeError("More than one Herdr connection matches this environment; remove its duplicate profile.")
+    machine = matching[0]["id"]
     cwd = item["config"]["user.agent-env.cwd"]
-    workspaces = herdr("workspace", "list", machine=state["label"])["result"]["workspaces"]
+    workspaces = herdr("workspace", "list", machine=machine)["result"]["workspaces"]
     if not any(w.get("label") == name for w in workspaces):
         result = herdr("workspace", "create", "--label", name, "--cwd", cwd,
-                       "--no-focus", machine=state["label"])["result"]
+                       "--no-focus", machine=machine)["result"]
         left = result["root_pane"]["pane_id"]
         right = herdr("pane", "split", left, "--direction", "right", "--cwd", cwd,
-                      "--no-focus", machine=state["label"])["result"]["pane"]["pane_id"]
-        herdr("pane", "run", right, "nvim .", machine=state["label"])
-        authed = subprocess.run(["ssh", "-o", "BatchMode=yes", state["target"],
-                                 "/home/dev/.local/bin/codex login status"],
-                                capture_output=True).returncode == 0
-        if authed:
-            herdr("agent", "start", "main", "--kind", "codex", "--pane", left,
-                  "--timeout", "20000", "--", "--yolo", machine=state["label"])
-        else:
-            message = ("Entorno listo. Logins propios de este entorno:\n"
-                       "  gh auth login --hostname github.com --git-protocol https --web --skip-ssh-key\n"
-                       "  gh auth setup-git --hostname github.com\n"
-                       "  codex login --device-auth\n"
-                       "Despues ejecuta: codex\n")
-            herdr("pane", "run", left, "printf %s " + shlex.quote(message), machine=state["label"])
+                      "--no-focus", machine=machine)["result"]["pane"]["pane_id"]
+        state.update(left_pane=left, right_pane=right)
+        write_private(STATE / f"{name}.json", json.dumps(state, indent=2) + "\n")
+        start_project_panes(state, machine)
+        if len(workspaces) == 1 and workspaces[0].get("label") == "~" and workspaces[0].get("pane_count") == 1:
+            # This empty home workspace was created by our initial server setup.
+            herdr("workspace", "close", workspaces[0]["workspace_id"], machine=machine)
+    elif revived and state.get("left_pane") and state.get("right_pane"):
+        start_project_panes(state, machine)
     print(f'Available in Herdr: {state["label"]} → {name}')
     print(f'SSH: ssh {state["target"]}   Project: {cwd}')
 

@@ -70,7 +70,9 @@ Neovim on the right and a shell on the left. First sign into GitHub and Codex in
 that shell, then run `codex`. A repository that requires authentication can be
 cloned after login. Credentials belong to that environment and are not shared.
 `open` starts a stopped environment and reconnects without duplicating the
-workspace. Environments retain the profile's manual-start policy after reboot.
+connection or workspace. After an environment restart it starts Herdr again and
+restores the project editor in its managed pane. Existing running panes are left
+alone. Environments retain the profile's manual-start policy after host reboot.
 
 `remove` permanently deletes that environment's filesystem and its managed
 connection entries. It refuses to operate on instances not created by this
