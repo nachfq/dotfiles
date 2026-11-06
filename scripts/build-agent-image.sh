@@ -6,7 +6,7 @@ revision=${1:?Pass the dotfiles Git commit to build}
 builder="agent-image-build-$(date +%Y%m%d%H%M%S)"
 alias_name="agent-base-$(date +%Y%m%d)-${revision:0:8}"
 incus launch images:ubuntu/24.04 "$builder" -p agent-pilot -c security.nesting=true \
-  -c user.agent-image-builder=true
+  -c user.agent-image-builder=true </dev/null
 printf 'Building %s from dotfiles %s\n' "$builder" "$revision"
 # Keep a failed builder for diagnosis. It never receives credentials or project files.
 trap 'printf "Build stopped. Inspect builder: %s\n" "$builder" >&2' ERR
@@ -18,9 +18,9 @@ apt-get update -qq
 apt-get install -y -qq --no-install-recommends git curl ca-certificates
 runuser -u dev -- git clone https://github.com/nachfq/dotfiles.git /home/dev/dotfiles
 ROOT
-incus exec "$builder" -- runuser -u dev -- git -C /home/dev/dotfiles checkout --detach "$revision"
-incus exec "$builder" -- bash /home/dev/dotfiles/setup-agent.sh install-tools
-incus exec "$builder" -- bash /home/dev/dotfiles/setup-agent.sh grant-sudo
+incus exec "$builder" --disable-stdin -- runuser -u dev -- git -C /home/dev/dotfiles checkout --detach "$revision"
+incus exec "$builder" --disable-stdin -- bash /home/dev/dotfiles/setup-agent.sh install-tools
+incus exec "$builder" --disable-stdin -- bash /home/dev/dotfiles/setup-agent.sh grant-sudo
 incus exec "$builder" -- runuser -u dev -- env \
   HOME=/home/dev PATH=/home/dev/.local/bin:/home/dev/.local/share/mise/shims:/usr/local/bin:/usr/bin:/bin \
   bash -s <<'USER'
