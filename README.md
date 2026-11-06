@@ -64,6 +64,7 @@ environment, install the editor tools first:
 ./setup-agent.sh install-tools
 ./setup-agent.sh apply
 ./setup-agent.sh install-codex
+./setup-agent.sh configure-codex
 ./setup-agent.sh install-herdr
 ./setup-agent.sh plugins
 ```
@@ -75,7 +76,7 @@ run that step from the Incus host, replacing `ENVIRONMENT` and the user path:
 incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh install-tools
 ```
 
-Then run `apply`, `install-codex`, `install-herdr` and `plugins` as `dev` inside that environment. The installer
+Then run `apply`, `install-codex`, `configure-codex`, `install-herdr` and `plugins` as `dev` inside that environment. The installer
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
 LazyGit 0.66.2, Node.js 24.22.2, Starship 1.27.0, and GitHub CLI 2.103.3.
 Supporting system packages,
@@ -105,7 +106,15 @@ as the regular user without making a model request:
 codex app-server daemon start
 ```
 
-For Codex's Linux sandbox inside an unprivileged Incus container, enable nesting
+`configure-codex` sets the environment user's default `sandbox_mode` to
+`danger-full-access` and `approval_policy` to `never`: the equivalent of YOLO.
+It preserves existing settings and hook trust, backs up changes, and leaves
+authentication files alone. Restart Codex after changing these defaults.
+Run this step inside the agent environment; the Incus container provides the
+isolation. This step is separate from `apply`, so sharing editor and shell
+configuration with the laptop does not change its Codex permissions.
+
+If you choose to use Codex's internal Linux sandbox as well, enable nesting
 on that instance from the Incus host:
 
 ```bash

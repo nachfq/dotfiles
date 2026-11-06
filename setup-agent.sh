@@ -6,7 +6,7 @@ config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 usage() {
   cat <<'HELP'
-Usage: ./setup-agent.sh [apply|install-tools|install-codex|install-herdr|plugins]
+Usage: ./setup-agent.sh [apply|install-tools|install-codex|configure-codex|install-herdr|plugins]
 
   apply          Link Neovim, Herdr, Starship and Bash configuration.
                  Add a single source line to .bashrc for the shared shell setup.
@@ -14,6 +14,8 @@ Usage: ./setup-agent.sh [apply|install-tools|install-codex|install-herdr|plugins
   install-tools  Install development tools and gh on Ubuntu Linux x86_64.
                  Requires root or sudo; does not apply user configuration.
   install-codex  Install/update Codex using the official installer as this user.
+  configure-codex  Default Codex to full access without approval prompts (YOLO).
+                   Run only inside the disposable agent environment.
   install-herdr  Install/update Herdr and its Codex status integration as this user.
   plugins        Restore Neovim plugins, tools, parsers and Spanish spelling files.
 
@@ -181,6 +183,13 @@ case "${1:-apply}" in
   apply) apply_config ;;
   install-tools) install_tools ;;
   install-codex) install_codex ;;
+  configure-codex)
+    if (( EUID == 0 )); then
+      printf 'Run configure-codex as the user who will use Codex, not root.\n' >&2
+      exit 1
+    fi
+    python3 "$repo_dir/scripts/configure-codex.py"
+    ;;
   install-herdr) install_herdr ;;
   plugins)
     command -v nvim >/dev/null || { printf 'Install Neovim first.\n' >&2; exit 1; }
