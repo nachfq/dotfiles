@@ -10,6 +10,9 @@ Ubuntu environments managed by Incus.
 - `config/herdr`: Herdr keybindings and navigation/font helpers. Commands use the
   current user's config directory rather than a laptop-specific home path.
 - `config/bash/worktrees.bash`: the `cdworktree` / `cdw` command and completion.
+- `config/bash/interactive.bash` and `inputrc`: portable Bash history, completion,
+  navigation aliases and Readline bindings adapted from the laptop's Omarchy setup.
+- `config/starship.toml`: the laptop's prompt, directory and Git status styling.
 - `setup.sh`: explicit tool installation, configuration linking, and plugin setup.
 
 The old chezmoi source state is preserved in the
@@ -26,11 +29,13 @@ cd ~/dotfiles
 ./setup.sh apply
 ```
 
-The script links Neovim's configuration directory and individual Herdr/Bash
+The script links Neovim's configuration directory and individual Herdr/Bash/Starship
 configuration paths. It preserves Herdr's runtime directory, sockets, logs and
 saved sessions. Existing configuration is backed up under
 `~/.local/state/dotfiles/backups/` (or `$XDG_STATE_HOME/dotfiles/backups/`). Applying
-the same checkout again leaves existing matching symlinks alone.
+the same checkout again leaves existing matching symlinks alone. It adds one
+source line to `~/.bashrc`, preserving a backup before the first change. A new Bash
+shell loads the shared prompt and helper configuration.
 
 The laptop already supplies its tools through Omarchy. For a new **Ubuntu x86_64**
 environment, install the editor tools first:
@@ -50,18 +55,16 @@ incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup.sh install-tools
 
 Then run `apply` and `plugins` as `dev` inside that environment. The installer
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
-LazyGit 0.66.2, and Node.js 24.22.2. Supporting system packages come from Ubuntu.
+LazyGit 0.66.2, Node.js 24.22.2, and Starship 1.27.0. Supporting system packages,
+including Eza and Bash completion, come from Ubuntu.
 Herdr, coding agents, GitHub authentication and project-specific toolchains are
 configured separately. `plugins` restores the Neovim plugins and waits for the
 configured Mason tools and Tree-sitter parsers to finish installing. Additional
 language servers and tools may download when their language integration is first
 used; language toolchains such as Rust are project dependencies.
 
-To enable the optional Bash helper, add this to your interactive shell setup:
-
-```bash
-source "${XDG_CONFIG_HOME:-$HOME/.config}/bash/worktrees.bash"
-```
+The shell setup enables the Bash worktree helper automatically. It preserves the
+existing `.bashrc` instead of replacing it with an Omarchy-specific startup file.
 
 ## Update and edit
 
@@ -91,6 +94,9 @@ session with its CLI/socket available in the same environment. Copying these
 files alone does not connect a remote editor to a local Herdr session. Font zoom
 requires the laptop's Hyprland/Foot desktop; fonts and the terminal itself remain
 on the laptop. No desktop compositor is installed by this repository.
+The container uses the same Starship prompt and portable shell settings. Font
+rendering, terminal palette, padding and window appearance come from the local
+terminal that displays the remote session.
 
 ## Credentials and local data
 

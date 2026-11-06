@@ -8,7 +8,8 @@ usage() {
   cat <<'HELP'
 Usage: ./setup.sh [apply|install-tools|plugins]
 
-  apply          Link Neovim, Herdr config/helpers and the Bash worktree helper.
+  apply          Link Neovim, Herdr, Starship and Bash configuration.
+                 Add a single source line to .bashrc for the shared shell setup.
                  Existing files are backed up before replacement. (Default.)
   install-tools  Install development editor tools on Ubuntu Linux x86_64.
                  Requires root or sudo; does not apply user configuration.
@@ -46,7 +47,19 @@ apply_config() {
   link_config "$repo_dir/config/herdr/config.toml" "$config_dir/herdr/config.toml" herdr-config.toml
   link_config "$repo_dir/config/herdr/helpers" "$config_dir/herdr/helpers" herdr-helpers
   link_config "$repo_dir/config/bash/worktrees.bash" "$config_dir/bash/worktrees.bash" worktrees.bash
-  printf 'Applied configuration. Your shell startup files were not changed.\n'
+  link_config "$repo_dir/config/bash/interactive.bash" "$config_dir/bash/interactive.bash" interactive.bash
+  link_config "$repo_dir/config/bash/inputrc" "$config_dir/bash/inputrc" inputrc
+  link_config "$repo_dir/config/starship.toml" "$config_dir/starship.toml" starship.toml
+  local source_line='[[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bash/interactive.bash" ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/bash/interactive.bash"'
+  if ! grep -Fqx -- "$source_line" "$HOME/.bashrc" 2>/dev/null; then
+    if [[ -e "$HOME/.bashrc" ]]; then
+      mkdir -p -- "$backup_dir"
+      cp -p -- "$HOME/.bashrc" "$backup_dir/bashrc"
+      printf 'Backed up .bashrc to %s/bashrc\n' "$backup_dir"
+    fi
+    printf '\n# Shared development shell configuration\n%s\n' "$source_line" >> "$HOME/.bashrc"
+  fi
+  printf 'Applied configuration. Open a new Bash shell to load the prompt and shell helpers.\n'
 }
 
 install_tools() {
@@ -63,7 +76,7 @@ install_tools() {
   fi
   "${root[@]}" apt-get update -qq
   "${root[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq
+    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq bash-completion eza
   "${root[@]}" install -d /opt /usr/local/bin
   if ! command -v fd >/dev/null; then
     "${root[@]}" ln -s /usr/bin/fdfind /usr/local/bin/fd
@@ -107,6 +120,13 @@ install_tools() {
     for name in node npm npx; do
       "${root[@]}" ln -sfn "/opt/node-v24.22.2-linux-x64/bin/$name" "/usr/local/bin/$name"
     done
+  fi
+  if [[ $(starship --version 2>/dev/null | sed -n '1p' || true) != 'starship 1.27.0' ]]; then
+    fetch starship.tar.gz \
+      https://github.com/starship/starship/releases/download/v1.27.0/starship-x86_64-unknown-linux-musl.tar.gz \
+      10c8eb4cb3b761d9bf59ea828444c2dab36c900b7d69a69e08814b286969df89
+    tar -xzf "$download_dir/starship.tar.gz" -C "$download_dir" starship
+    "${root[@]}" install -m 755 "$download_dir/starship" /usr/local/bin/starship
   fi
   printf 'Installed editor tools. Run apply and plugins as your regular user.\n'
 }
