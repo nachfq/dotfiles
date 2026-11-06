@@ -1,0 +1,14 @@
+# Credentials and local runtime state never belong in this public repository.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+**/gh/hosts.yml
+**/auth.json
+**/session.json
+**/session-snapshots/
+*.log
+*.sock
+*.bak*
+__pycache__/

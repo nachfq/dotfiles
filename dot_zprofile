@@ -1,5 +1,0 @@
-# ~/.zprofile
-# Login environment (TTY / SSH)
-export PATH="$HOME/.local/bin:$PATH"
-[[ -f "$HOME/.local/bin/env" ]] && source "$HOME/.local/bin/env"
-
