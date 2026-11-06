@@ -123,9 +123,10 @@ the configuration changes that need them.
 
 ## Desktop and remote behavior
 
-The included Neovim theme is a regular file containing the laptop's current
-`tokyonight-night` theme. It does not depend on Omarchy files existing remotely.
-Omarchy theme changes are not automatically propagated to remote environments.
+On Omarchy, Neovim loads the generated active theme from its standard state
+directory and watches theme selections for live reloading. On other systems it
+uses the included `tokyonight-night` fallback. Generated Omarchy theme state is
+not committed, and theme selections are not propagated to remote environments.
 
 Neovim/Herdr selection and pane-navigation integrations require a running Herdr
 session with its CLI/socket available in the same environment. Copying these

@@ -95,6 +95,36 @@ return {
 					end)
 				end,
 			})
+
+			-- Omarchy swaps generated theme files outside this Git checkout.
+			local current = (vim.env.XDG_STATE_HOME or vim.fn.expand("~/.local/state")) .. "/omarchy/current"
+			if vim.fn.isdirectory(current) == 1 then
+				local watcher = vim.uv.new_fs_event()
+				if watcher then
+					local pending = false
+					local started = watcher:start(current, {}, function(err, filename)
+						if err or filename ~= "theme.name" or pending then
+							return
+						end
+						pending = true
+						vim.defer_fn(function()
+							pending = false
+							vim.api.nvim_exec_autocmds("User", { pattern = "LazyReload", modeline = false })
+						end, 100)
+					end)
+					if started then
+						vim.api.nvim_create_autocmd("VimLeavePre", {
+							once = true,
+							callback = function()
+								watcher:stop()
+								watcher:close()
+							end,
+						})
+					else
+						watcher:close()
+					end
+				end
+			end
 		end,
 	},
 }
