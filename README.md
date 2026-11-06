@@ -55,9 +55,12 @@ agent-env remove demo
 Run these from the laptop's Herdr. The default host is `nacho@homelab`; override
 `AGENT_ENV_HOST` if needed. The host must have the existing `agent-pilot` profile,
 its Incus bridge/firewall setup, and the private `agent-base` image.
+Use Incus 6.0.1 or newer: 6.0.0 has an upstream image-unpacking bug that skips
+folders named `dev`, including `/home/dev`. `new` refuses that server version.
 
 Each new environment is named `dev-NAME` on Incus. It receives only the laptop's
-SSH public key. SSH uses a ProxyJump through homelab and pins the environment's
+SSH public key for access, plus Git's name/email when configured on the laptop.
+SSH uses a ProxyJump through homelab and pins the environment's
 host key obtained through Incus. Managed connection entries are kept in
 `~/.ssh/agent-env.conf` and `~/.ssh/agent-env_known_hosts`; the first use adds an
 Include to `~/.ssh/config` after making a backup.

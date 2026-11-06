@@ -3,6 +3,10 @@
 set -euo pipefail
 revision=${1:?Pass the dotfiles Git commit to build}
 [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || { printf 'Expected a full Git commit.\n' >&2; exit 1; }
+if [[ $(incus version | sed -n 's/^Server version: //p') == 6.0.0* ]]; then
+  printf 'Update Incus to at least 6.0.1 first; 6.0.0 skips dev folders when unpacking published images.\n' >&2
+  exit 1
+fi
 builder="agent-image-build-$(date +%Y%m%d%H%M%S)"
 alias_name="agent-base-$(date +%Y%m%d)-${revision:0:8}"
 incus launch images:ubuntu/24.04 "$builder" -p agent-pilot -c security.nesting=true \

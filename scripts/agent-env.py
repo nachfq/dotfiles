@@ -132,9 +132,8 @@ def connect(name):
     # The host key is obtained through the trusted host + Incus channel.
     host_key = incus("exec", instance, "--", "cat", "/etc/ssh/ssh_host_ed25519_key.pub")
     state = save_connection(name, address, host_key)
-    profiles = json.loads(run(["herdr", "machine", "list", "--json"]))
-    if not any(p["target"] == state["target"] and p["label"] == state["label"] for p in profiles):
-        run(["herdr", "machine", "add", state["target"], "--label", state["label"]])
+    # Herdr's native setup also starts the remote server after an environment reboot.
+    run(["herdr", "machine", "add", state["target"], "--label", state["label"]])
     cwd = item["config"]["user.agent-env.cwd"]
     workspaces = herdr("workspace", "list", machine=state["label"])["result"]["workspaces"]
     if not any(w.get("label") == name for w in workspaces):
@@ -163,6 +162,10 @@ def connect(name):
 
 def create(name, repo):
     instance = instance_name(name)
+    version = json.loads(incus("query", "/1.0"))["environment"]["server_version"]
+    numbers = re.match(r"(\d+)\.(\d+)\.(\d+)", version)
+    if not numbers or tuple(map(int, numbers.groups())) < (6, 0, 1):
+        raise RuntimeError("Incus 6.0.1 or newer is required: 6.0.0 skips dev folders when unpacking images.")
     if any(item["name"] == instance for item in instances()):
         raise RuntimeError(f"{instance} already exists. Use open {name}.")
     key = SSH_DIR / "id_ed25519.pub"
@@ -183,6 +186,12 @@ def create(name, repo):
     # main branch without fetching or changing the image's versioned contents.
     incus("exec", instance, "--", "runuser", "-u", "dev", "--",
           "git", "-C", "/home/dev/dotfiles", "switch", "main")
+    for key in ("user.name", "user.email"):
+        value = subprocess.run(["git", "config", "--global", "--get", key],
+                               capture_output=True, text=True)
+        if value.returncode == 0 and value.stdout.strip():
+            incus("exec", instance, "--", "runuser", "-u", "dev", "--",
+                  "git", "config", "--global", key, value.stdout.strip())
     address = wait_for_ip(name)
     if repo:
         try:
