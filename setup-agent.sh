@@ -250,8 +250,15 @@ case "${1:-apply}" in
       exit 1
     fi
     prepare_spelling
-    DOTFILES_NVIM_SETUP="$repo_dir/scripts/prepare-nvim.lua" \
-      nvim --headless '+Lazy! restore' '+lua dofile(vim.env.DOTFILES_NVIM_SETUP)' +qa
+    # A clean Lazy bootstrap can rewrite the lockfile before :Lazy restore runs.
+    # Seed its in-memory lock from the original snapshot, then restore that file.
+    nvim_lock=$(mktemp)
+    cp "$repo_dir/config/nvim/lazy-lock.json" "$nvim_lock"
+    trap 'cp "$nvim_lock" "$repo_dir/config/nvim/lazy-lock.json"; rm -- "$nvim_lock"' EXIT
+    DOTFILES_NVIM_LOCKFILE="$nvim_lock" DOTFILES_NVIM_SETUP="$repo_dir/scripts/prepare-nvim.lua" \
+      nvim --headless \
+      '+lua local lock = require("lazy.manage.lock"); lock.lock = vim.json.decode(table.concat(vim.fn.readfile(vim.env.DOTFILES_NVIM_LOCKFILE), "\n")); lock._loaded = true' \
+      '+Lazy! restore' '+lua dofile(vim.env.DOTFILES_NVIM_SETUP)' +qa
     ;;
   -h|--help|help) usage ;;
   *) usage >&2; exit 2 ;;

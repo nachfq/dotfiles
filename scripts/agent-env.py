@@ -183,6 +183,7 @@ def create(name, repo):
     # main branch without fetching or changing the image's versioned contents.
     incus("exec", instance, "--", "runuser", "-u", "dev", "--",
           "git", "-C", "/home/dev/dotfiles", "switch", "main")
+    address = wait_for_ip(name)
     if repo:
         try:
             incus("exec", instance, "--", "runuser", "-u", "dev", "--", "env", "GIT_TERMINAL_PROMPT=0",
@@ -192,7 +193,6 @@ def create(name, repo):
             incus("exec", instance, "--", "install", "-d", "-o", "dev", "-g", "dev", cwd)
     else:
         incus("exec", instance, "--", "install", "-d", "-o", "dev", "-g", "dev", cwd)
-    address = wait_for_ip(name)
     incus("config", "device", "override", instance, "eth0", "ipv4.address=" + address)
     connect(name)
 
