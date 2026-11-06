@@ -70,7 +70,7 @@ install_tools() {
   fi
 
   download_dir=$(mktemp -d)
-  trap 'rm -rf -- "$download_dir"' EXIT
+  trap 'rm -r -- "$download_dir"' EXIT
   fetch() {
     local name=$1 url=$2 checksum=$3
     curl --fail --silent --show-error --location --retry 3 "$url" -o "$download_dir/$name"
@@ -116,7 +116,12 @@ case "${1:-apply}" in
   install-tools) install_tools ;;
   plugins)
     command -v nvim >/dev/null || { printf 'Install Neovim first.\n' >&2; exit 1; }
-    nvim --headless '+Lazy! restore' +qa
+    if (( EUID == 0 )); then
+      printf 'Run plugins as the user who will use the editor, not root.\n' >&2
+      exit 1
+    fi
+    DOTFILES_NVIM_SETUP="$repo_dir/scripts/prepare-nvim.lua" \
+      nvim --headless '+Lazy! restore' '+lua dofile(vim.env.DOTFILES_NVIM_SETUP)' +qa
     ;;
   -h|--help|help) usage ;;
   *) usage >&2; exit 2 ;;

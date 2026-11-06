@@ -52,8 +52,10 @@ Then run `apply` and `plugins` as `dev` inside that environment. The installer
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
 LazyGit 0.66.2, and Node.js 24.22.2. Supporting system packages come from Ubuntu.
 Herdr, coding agents, GitHub authentication and project-specific toolchains are
-configured separately. `plugins` restores the Neovim plugins; language servers,
-formatters and parsers can also download on first use through Mason/Tree-sitter.
+configured separately. `plugins` restores the Neovim plugins and waits for the
+configured Mason tools and Tree-sitter parsers to finish installing. Additional
+language servers and tools may download when their language integration is first
+used; language toolchains such as Rust are project dependencies.
 
 To enable the optional Bash helper, add this to your interactive shell setup:
 
