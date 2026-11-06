@@ -1,6 +1,11 @@
 # Portable terminal behavior shared by Omarchy and Ubuntu environments.
 [[ $- == *i* ]] || return
 
+case ":$PATH:" in
+  *":$HOME/.local/bin:"*) ;;
+  *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
+
 shopt -s histappend checkwinsize
 HISTCONTROL=ignoreboth
 HISTSIZE=32768

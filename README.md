@@ -63,6 +63,7 @@ environment, install the editor tools first:
 ```bash
 ./setup-agent.sh install-tools
 ./setup-agent.sh apply
+./setup-agent.sh install-codex
 ./setup-agent.sh plugins
 ```
 
@@ -73,10 +74,10 @@ run that step from the Incus host, replacing `ENVIRONMENT` and the user path:
 incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh install-tools
 ```
 
-Then run `apply` and `plugins` as `dev` inside that environment. The installer
+Then run `apply`, `install-codex` and `plugins` as `dev` inside that environment. The installer
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
-LazyGit 0.66.2, Node.js 24.22.2, Starship 1.27.0, GitHub CLI 2.103.3, and Codex
-CLI 0.166.0. Supporting system packages,
+LazyGit 0.66.2, Node.js 24.22.2, Starship 1.27.0, and GitHub CLI 2.103.3.
+Supporting system packages,
 including Eza and Bash completion, come from Ubuntu.
 Herdr, authentication and project-specific toolchains are
 configured separately. `plugins` restores the Neovim plugins and waits for the
@@ -84,11 +85,17 @@ configured Mason tools and Tree-sitter parsers to finish installing. Additional
 language servers and tools may download when their language integration is first
 used; language toolchains such as Rust are project dependencies.
 
-Codex is installed as its complete official package under `/opt/codex/0.166.0`,
-with `/usr/local/bin/codex` pointing to its CLI entrypoint. Keep that package
-layout intact: the bare binary reports a version and supports login, but cannot
-start the background app server. After installation, this command checks the
-runtime path as the regular user without making a model request:
+`install-codex` runs the official command as the regular user, without pinning a
+version or assembling the package manually:
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+```
+
+The official installer manages the complete package and installs the command in
+`~/.local/bin`. Run `install-codex` again to update to the latest release, then
+open a new Bash shell. After installation, this command checks the runtime path
+as the regular user without making a model request:
 
 ```bash
 codex app-server daemon start

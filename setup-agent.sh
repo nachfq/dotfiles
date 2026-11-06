@@ -6,13 +6,14 @@ config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 usage() {
   cat <<'HELP'
-Usage: ./setup-agent.sh [apply|install-tools|plugins]
+Usage: ./setup-agent.sh [apply|install-tools|install-codex|plugins]
 
   apply          Link Neovim, Herdr, Starship and Bash configuration.
                  Add a single source line to .bashrc for the shared shell setup.
                  Existing files are backed up before replacement. (Default.)
-  install-tools  Install development tools, gh and Codex on Ubuntu Linux x86_64.
+  install-tools  Install development tools and gh on Ubuntu Linux x86_64.
                  Requires root or sudo; does not apply user configuration.
+  install-codex  Install/update Codex using the official installer as this user.
   plugins        Restore Neovim plugins using the tracked lazy-lock.json.
 
 Logins, project dependencies and Herdr itself are configured separately.
@@ -135,27 +136,21 @@ install_tools() {
     tar -xzf "$download_dir/gh.tar.gz" -C "$download_dir" gh_2.103.3_linux_amd64/bin/gh
     "${root[@]}" install -m 755 "$download_dir/gh_2.103.3_linux_amd64/bin/gh" /usr/local/bin/gh
   fi
-  local codex_dir=/opt/codex/0.166.0
-  # The bare CLI can log in, but daemon startup needs the complete package layout.
-  if [[ ! -f "$codex_dir/codex-package.json" || ! -x "$codex_dir/bin/codex-exec-server" ||
-        ! -x "$codex_dir/bin/codex-code-mode-host" ||
-        $("$codex_dir/bin/codex" --version 2>/dev/null || true) != 'codex-cli 0.166.0' ]]; then
-    fetch codex.tar.gz \
-      https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz \
-      1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254
-    "${root[@]}" install -d "$codex_dir"
-    "${root[@]}" tar -xzf "$download_dir/codex.tar.gz" -C "$codex_dir"
-    test -f "$codex_dir/codex-package.json"
-    test -x "$codex_dir/bin/codex-exec-server"
-    test -x "$codex_dir/bin/codex-code-mode-host"
+  printf 'Installed development tools. Run apply, install-codex and plugins as your regular user.\n'
+}
+
+install_codex() {
+  if (( EUID == 0 )); then
+    printf 'Run install-codex as the user who will use Codex, not root.\n' >&2
+    exit 1
   fi
-  "${root[@]}" ln -sfn "$codex_dir/bin/codex" /usr/local/bin/codex
-  printf 'Installed development tools. Run apply and plugins, then sign in as your regular user.\n'
+  curl -fsSL https://chatgpt.com/codex/install.sh | sh
 }
 
 case "${1:-apply}" in
   apply) apply_config ;;
   install-tools) install_tools ;;
+  install-codex) install_codex ;;
   plugins)
     command -v nvim >/dev/null || { printf 'Install Neovim first.\n' >&2; exit 1; }
     if (( EUID == 0 )); then
