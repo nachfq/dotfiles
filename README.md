@@ -3,6 +3,26 @@
 Shared terminal development configuration for my Omarchy laptop and disposable
 Ubuntu environments managed by Incus.
 
+## Repository layout and setup profiles
+
+Git versions the ordinary files under `config/`. They do not have to be scattered
+through the home directory inside this repository: the setup script connects
+them to each application's expected location using symlinks.
+
+| Versioned source | Location used by the application |
+| --- | --- |
+| `config/nvim/` | `~/.config/nvim/` |
+| `config/herdr/config.toml` and `helpers/` | The matching paths under `~/.config/herdr/` |
+| `config/bash/` | The selected files under `~/.config/bash/` |
+| `config/starship.toml` | `~/.config/starship.toml` |
+
+`setup-agent.sh` is the Ubuntu agent-environment profile. It installs terminal
+development tools and applies the shared editor/shell configuration. There is no
+desktop setup script yet. Desktop-only configuration can also live under
+`config/`; a separate desktop profile can select those files without installing
+a desktop inside the agent environments. Shared configurations remain single
+files rather than separate copies for each profile.
+
 ## Contents
 
 - `config/nvim`: the current LazyVim configuration, personal mappings, Rust and
@@ -13,7 +33,7 @@ Ubuntu environments managed by Incus.
 - `config/bash/interactive.bash` and `inputrc`: portable Bash history, completion,
   navigation aliases and Readline bindings adapted from the laptop's Omarchy setup.
 - `config/starship.toml`: the laptop's prompt, directory and Git status styling.
-- `setup.sh`: explicit tool installation, configuration linking, and plugin setup.
+- `setup-agent.sh`: explicit tool installation, configuration linking, and plugin setup.
 
 The old chezmoi source state is preserved in the
 [`legacy-chezmoi-2026-11-05`](https://github.com/nachfq/dotfiles/tree/legacy-chezmoi-2026-11-05)
@@ -26,7 +46,7 @@ Run as your regular user, inside the environment where the tools will run:
 ```bash
 git clone https://github.com/nachfq/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-./setup.sh apply
+./setup-agent.sh apply
 ```
 
 The script links Neovim's configuration directory and individual Herdr/Bash/Starship
@@ -41,16 +61,16 @@ The laptop already supplies its tools through Omarchy. For a new **Ubuntu x86_64
 environment, install the editor tools first:
 
 ```bash
-./setup.sh install-tools
-./setup.sh apply
-./setup.sh plugins
+./setup-agent.sh install-tools
+./setup-agent.sh apply
+./setup-agent.sh plugins
 ```
 
 `install-tools` requires root or sudo. When the container user does not have sudo,
 run that step from the Incus host, replacing `ENVIRONMENT` and the user path:
 
 ```bash
-incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup.sh install-tools
+incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh install-tools
 ```
 
 Then run `apply` and `plugins` as `dev` inside that environment. The installer
@@ -64,6 +84,16 @@ configured Mason tools and Tree-sitter parsers to finish installing. Additional
 language servers and tools may download when their language integration is first
 used; language toolchains such as Rust are project dependencies.
 
+Codex is installed as its complete official package under `/opt/codex/0.166.0`,
+with `/usr/local/bin/codex` pointing to its CLI entrypoint. Keep that package
+layout intact: the bare binary reports a version and supports login, but cannot
+start the background app server. After installation, this command checks the
+runtime path as the regular user without making a model request:
+
+```bash
+codex app-server daemon start
+```
+
 The shell setup enables the Bash worktree helper automatically. It preserves the
 existing `.bashrc` instead of replacing it with an Omarchy-specific startup file.
 
@@ -76,8 +106,8 @@ On another environment:
 ```bash
 cd ~/dotfiles
 git pull --ff-only
-./setup.sh apply
-./setup.sh plugins
+./setup-agent.sh apply
+./setup-agent.sh plugins
 ```
 
 Avoid editing the shared configuration simultaneously while pulling updates.

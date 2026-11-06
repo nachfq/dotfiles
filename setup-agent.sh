@@ -6,7 +6,7 @@ config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 usage() {
   cat <<'HELP'
-Usage: ./setup.sh [apply|install-tools|plugins]
+Usage: ./setup-agent.sh [apply|install-tools|plugins]
 
   apply          Link Neovim, Herdr, Starship and Bash configuration.
                  Add a single source line to .bashrc for the shared shell setup.
@@ -135,13 +135,21 @@ install_tools() {
     tar -xzf "$download_dir/gh.tar.gz" -C "$download_dir" gh_2.103.3_linux_amd64/bin/gh
     "${root[@]}" install -m 755 "$download_dir/gh_2.103.3_linux_amd64/bin/gh" /usr/local/bin/gh
   fi
-  if [[ $(codex --version 2>/dev/null || true) != 'codex-cli 0.166.0' ]]; then
+  local codex_dir=/opt/codex/0.166.0
+  # The bare CLI can log in, but daemon startup needs the complete package layout.
+  if [[ ! -f "$codex_dir/codex-package.json" || ! -x "$codex_dir/bin/codex-exec-server" ||
+        ! -x "$codex_dir/bin/codex-code-mode-host" ||
+        $("$codex_dir/bin/codex" --version 2>/dev/null || true) != 'codex-cli 0.166.0' ]]; then
     fetch codex.tar.gz \
-      https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz \
-      a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978
-    tar -xzf "$download_dir/codex.tar.gz" -C "$download_dir" codex-x86_64-unknown-linux-musl
-    "${root[@]}" install -m 755 "$download_dir/codex-x86_64-unknown-linux-musl" /usr/local/bin/codex
+      https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-package-x86_64-unknown-linux-musl.tar.gz \
+      1d44b28bc4ac9937d7d3532264baa68a507ce364956a0d4ebb856f331cdee254
+    "${root[@]}" install -d "$codex_dir"
+    "${root[@]}" tar -xzf "$download_dir/codex.tar.gz" -C "$codex_dir"
+    test -f "$codex_dir/codex-package.json"
+    test -x "$codex_dir/bin/codex-exec-server"
+    test -x "$codex_dir/bin/codex-code-mode-host"
   fi
+  "${root[@]}" ln -sfn "$codex_dir/bin/codex" /usr/local/bin/codex
   printf 'Installed development tools. Run apply and plugins, then sign in as your regular user.\n'
 }
 
