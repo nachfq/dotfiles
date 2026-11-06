@@ -6,7 +6,7 @@ config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 usage() {
   cat <<'HELP'
-Usage: ./setup-agent.sh [apply|install-tools|install-codex|plugins]
+Usage: ./setup-agent.sh [apply|install-tools|install-codex|install-herdr|plugins]
 
   apply          Link Neovim, Herdr, Starship and Bash configuration.
                  Add a single source line to .bashrc for the shared shell setup.
@@ -14,9 +14,10 @@ Usage: ./setup-agent.sh [apply|install-tools|install-codex|plugins]
   install-tools  Install development tools and gh on Ubuntu Linux x86_64.
                  Requires root or sudo; does not apply user configuration.
   install-codex  Install/update Codex using the official installer as this user.
-  plugins        Restore Neovim plugins using the tracked lazy-lock.json.
+  install-herdr  Install/update Herdr and its Codex status integration as this user.
+  plugins        Restore Neovim plugins, tools, parsers and Spanish spelling files.
 
-Logins, project dependencies and Herdr itself are configured separately.
+Logins and project dependencies are configured separately.
 HELP
 }
 
@@ -77,7 +78,7 @@ install_tools() {
   fi
   "${root[@]}" apt-get update -qq
   "${root[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq bash-completion eza
+    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq bash-completion eza bubblewrap
   "${root[@]}" install -d /opt /usr/local/bin
   if ! command -v fd >/dev/null; then
     "${root[@]}" ln -s /usr/bin/fdfind /usr/local/bin/fd
@@ -136,7 +137,7 @@ install_tools() {
     tar -xzf "$download_dir/gh.tar.gz" -C "$download_dir" gh_2.103.3_linux_amd64/bin/gh
     "${root[@]}" install -m 755 "$download_dir/gh_2.103.3_linux_amd64/bin/gh" /usr/local/bin/gh
   fi
-  printf 'Installed development tools. Run apply, install-codex and plugins as your regular user.\n'
+  printf 'Installed development tools. Run apply, install-codex, install-herdr and plugins as your regular user.\n'
 }
 
 install_codex() {
@@ -147,16 +148,45 @@ install_codex() {
   curl -fsSL https://chatgpt.com/codex/install.sh | sh
 }
 
+install_herdr() {
+  if (( EUID == 0 )); then
+    printf 'Run install-herdr as the user who will use Herdr, not root.\n' >&2
+    exit 1
+  fi
+  curl -fsSL https://herdr.dev/install.sh | sh
+  "$HOME/.local/bin/herdr" integration install codex
+}
+
+prepare_spelling() (
+  # English ships with Neovim; download the Spanish files to its user runtime.
+  # Keep partial downloads out of the runtime directory if the connection fails.
+  local spell_dir="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/site/spell"
+  local temp_dir extension file
+  temp_dir=$(mktemp -d)
+  trap 'rm -r -- "$temp_dir"' EXIT
+  mkdir -p -- "$spell_dir"
+  for extension in spl sug; do
+    file="es.utf-8.$extension"
+    if [[ ! -s "$spell_dir/$file" ]]; then
+      curl --fail --silent --show-error --location --retry 3 \
+        "https://ftp.nluug.nl/pub/vim/runtime/spell/$file" -o "$temp_dir/$file"
+      mv -- "$temp_dir/$file" "$spell_dir/$file"
+    fi
+  done
+)
+
 case "${1:-apply}" in
   apply) apply_config ;;
   install-tools) install_tools ;;
   install-codex) install_codex ;;
+  install-herdr) install_herdr ;;
   plugins)
     command -v nvim >/dev/null || { printf 'Install Neovim first.\n' >&2; exit 1; }
     if (( EUID == 0 )); then
       printf 'Run plugins as the user who will use the editor, not root.\n' >&2
       exit 1
     fi
+    prepare_spelling
     DOTFILES_NVIM_SETUP="$repo_dir/scripts/prepare-nvim.lua" \
       nvim --headless '+Lazy! restore' '+lua dofile(vim.env.DOTFILES_NVIM_SETUP)' +qa
     ;;

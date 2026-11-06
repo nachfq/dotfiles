@@ -64,6 +64,7 @@ environment, install the editor tools first:
 ./setup-agent.sh install-tools
 ./setup-agent.sh apply
 ./setup-agent.sh install-codex
+./setup-agent.sh install-herdr
 ./setup-agent.sh plugins
 ```
 
@@ -74,14 +75,15 @@ run that step from the Incus host, replacing `ENVIRONMENT` and the user path:
 incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh install-tools
 ```
 
-Then run `apply`, `install-codex` and `plugins` as `dev` inside that environment. The installer
+Then run `apply`, `install-codex`, `install-herdr` and `plugins` as `dev` inside that environment. The installer
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
 LazyGit 0.66.2, Node.js 24.22.2, Starship 1.27.0, and GitHub CLI 2.103.3.
 Supporting system packages,
-including Eza and Bash completion, come from Ubuntu.
-Herdr, authentication and project-specific toolchains are
-configured separately. `plugins` restores the Neovim plugins and waits for the
-configured Mason tools and Tree-sitter parsers to finish installing. Additional
+including Eza, Bash completion and Bubblewrap, come from Ubuntu.
+Authentication and project-specific toolchains are configured separately.
+`plugins` downloads the Spanish spelling dictionary and suggestions to Neovim's
+user data directory (English is bundled), restores the Neovim plugins, and waits
+for the configured Mason tools and Tree-sitter parsers to finish installing. Additional
 language servers and tools may download when their language integration is first
 used; language toolchains such as Rust are project dependencies.
 
@@ -100,6 +102,14 @@ as the regular user without making a model request:
 ```bash
 codex app-server daemon start
 ```
+
+`install-herdr` runs Herdr's official installer and `herdr integration install codex`.
+The integration installs Herdr's agent-status hooks in the user's Codex configuration;
+Codex may ask you to trust them when starting a session. SSH access and the saved
+machine connection in the laptop's Herdr are configured separately.
+
+Once the setup is stable, build a reusable image before signing into GitHub or
+Codex. Keep this script as the recipe for rebuilding and updating that image.
 
 The shell setup enables the Bash worktree helper automatically. It preserves the
 existing `.bashrc` instead of replacing it with an Omarchy-specific startup file.
