@@ -55,9 +55,10 @@ incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup.sh install-tools
 
 Then run `apply` and `plugins` as `dev` inside that environment. The installer
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
-LazyGit 0.66.2, Node.js 24.22.2, and Starship 1.27.0. Supporting system packages,
+LazyGit 0.66.2, Node.js 24.22.2, Starship 1.27.0, GitHub CLI 2.103.3, and Codex
+CLI 0.166.0. Supporting system packages,
 including Eza and Bash completion, come from Ubuntu.
-Herdr, coding agents, GitHub authentication and project-specific toolchains are
+Herdr, authentication and project-specific toolchains are
 configured separately. `plugins` restores the Neovim plugins and waits for the
 configured Mason tools and Tree-sitter parsers to finish installing. Additional
 language servers and tools may download when their language integration is first
@@ -105,5 +106,22 @@ not credentials, editor caches, agent sessions, or project checkouts. In
 particular, GitHub's `~/.config/gh/hosts.yml`, SSH private keys, `.env` files and
 coding-agent authentication stay outside the repository and its images.
 
-GitHub credentials can be provided separately by the Incus host. Removing an
-environment does not revoke those credentials or remove the host's copy.
+Each environment signs in independently, as its regular user:
+
+```bash
+gh auth login --hostname github.com --git-protocol https --web --skip-ssh-key
+gh auth setup-git --hostname github.com
+codex login --device-auth
+```
+
+Open the printed URLs on the laptop and complete each authorization. Codex device
+code login may need to be enabled in the account's security settings. Use
+`gh auth status` and `codex login status` to inspect the result.
+
+Credentials stay in that environment's standard user storage. Restarting the
+environment preserves them; deleting it removes the local copies. A new
+environment requires new sign-ins. Credentials are not mounted from the Incus
+host, copied from the laptop, or included in images. In particular, do not share
+the same Codex `auth.json` across independently running environments: token
+refreshes can conflict. Removing local files is separate from revoking the
+authorization with GitHub or OpenAI.

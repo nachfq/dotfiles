@@ -11,11 +11,11 @@ Usage: ./setup.sh [apply|install-tools|plugins]
   apply          Link Neovim, Herdr, Starship and Bash configuration.
                  Add a single source line to .bashrc for the shared shell setup.
                  Existing files are backed up before replacement. (Default.)
-  install-tools  Install development editor tools on Ubuntu Linux x86_64.
+  install-tools  Install development tools, gh and Codex on Ubuntu Linux x86_64.
                  Requires root or sudo; does not apply user configuration.
   plugins        Restore Neovim plugins using the tracked lazy-lock.json.
 
-Credentials, project dependencies, Herdr itself and coding agents are separate.
+Logins, project dependencies and Herdr itself are configured separately.
 HELP
 }
 
@@ -128,7 +128,21 @@ install_tools() {
     tar -xzf "$download_dir/starship.tar.gz" -C "$download_dir" starship
     "${root[@]}" install -m 755 "$download_dir/starship" /usr/local/bin/starship
   fi
-  printf 'Installed editor tools. Run apply and plugins as your regular user.\n'
+  if [[ $(gh --version 2>/dev/null | sed -n '1p' || true) != 'gh version 2.103.3 '* ]]; then
+    fetch gh.tar.gz \
+      https://github.com/cli/cli/releases/download/v2.103.3/gh_2.103.3_linux_amd64.tar.gz \
+      4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d
+    tar -xzf "$download_dir/gh.tar.gz" -C "$download_dir" gh_2.103.3_linux_amd64/bin/gh
+    "${root[@]}" install -m 755 "$download_dir/gh_2.103.3_linux_amd64/bin/gh" /usr/local/bin/gh
+  fi
+  if [[ $(codex --version 2>/dev/null || true) != 'codex-cli 0.166.0' ]]; then
+    fetch codex.tar.gz \
+      https://github.com/openai/codex/releases/download/rust-v0.166.0/codex-x86_64-unknown-linux-musl.tar.gz \
+      a0bf572d2f93f056c6712a6da348e96078dc84f3885fd7be67807ef389cb3978
+    tar -xzf "$download_dir/codex.tar.gz" -C "$download_dir" codex-x86_64-unknown-linux-musl
+    "${root[@]}" install -m 755 "$download_dir/codex-x86_64-unknown-linux-musl" /usr/local/bin/codex
+  fi
+  printf 'Installed development tools. Run apply and plugins, then sign in as your regular user.\n'
 }
 
 case "${1:-apply}" in
