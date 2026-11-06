@@ -79,7 +79,9 @@ Then run `apply`, `install-codex`, `install-herdr` and `plugins` as `dev` inside
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
 LazyGit 0.66.2, Node.js 24.22.2, Starship 1.27.0, and GitHub CLI 2.103.3.
 Supporting system packages,
-including Eza, Bash completion and Bubblewrap, come from Ubuntu.
+including Eza, Bash completion, Bubblewrap and AppArmor, come from Ubuntu.
+The installer loads `config/apparmor/dotfiles-bwrap`, which permits Bubblewrap
+to create user namespaces without disabling Ubuntu's AppArmor restriction globally.
 Authentication and project-specific toolchains are configured separately.
 `plugins` downloads the Spanish spelling dictionary and suggestions to Neovim's
 user data directory (English is bundled), restores the Neovim plugins, and waits
@@ -101,6 +103,21 @@ as the regular user without making a model request:
 
 ```bash
 codex app-server daemon start
+```
+
+For Codex's Linux sandbox inside an unprivileged Incus container, enable nesting
+on that instance from the Incus host:
+
+```bash
+incus config set ENVIRONMENT security.nesting=true
+```
+
+This relaxes the container's AppArmor restrictions for nested sandboxes; keep
+`security.privileged=false` and the isolated ID mapping. Verify command execution
+inside the environment without making a model request:
+
+```bash
+codex sandbox -c 'permissions.check.extends=":workspace"' -P check -C ~/PROJECT -- /bin/true
 ```
 
 `install-herdr` runs Herdr's official installer and `herdr integration install codex`.

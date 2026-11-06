@@ -78,7 +78,9 @@ install_tools() {
   fi
   "${root[@]}" apt-get update -qq
   "${root[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq bash-completion eza bubblewrap
+    git curl ca-certificates python3 build-essential unzip xz-utils ripgrep fd-find jq bash-completion eza bubblewrap apparmor
+  "${root[@]}" install -m 644 "$repo_dir/config/apparmor/dotfiles-bwrap" /etc/apparmor.d/dotfiles-bwrap
+  "${root[@]}" /sbin/apparmor_parser -r /etc/apparmor.d/dotfiles-bwrap
   "${root[@]}" install -d /opt /usr/local/bin
   if ! command -v fd >/dev/null; then
     "${root[@]}" ln -s /usr/bin/fdfind /usr/local/bin/fd
