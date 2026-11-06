@@ -18,7 +18,7 @@ apt-get update -qq
 apt-get install -y -qq --no-install-recommends git curl ca-certificates
 runuser -u dev -- git clone https://github.com/nachfq/dotfiles.git /home/dev/dotfiles
 ROOT
-incus exec "$builder" --disable-stdin -- runuser -u dev -- git -C /home/dev/dotfiles checkout --detach "$revision"
+incus exec "$builder" --disable-stdin -- runuser -u dev -- git -C /home/dev/dotfiles checkout -B main "$revision"
 incus exec "$builder" --disable-stdin -- bash /home/dev/dotfiles/setup-agent.sh install-tools
 incus exec "$builder" --disable-stdin -- bash /home/dev/dotfiles/setup-agent.sh grant-sudo
 incus exec "$builder" -- runuser -u dev -- env \
@@ -48,25 +48,7 @@ PermitRootLogin no
 AllowUsers dev
 SSH
 systemctl enable ssh.service
-python3 - <<'PY'
-from pathlib import Path
-import json, shutil
-assert Path('/etc/agent-base-builder').exists()
-home = Path('/home/dev')
-for forbidden in [home/'.codex/auth.json', home/'.config/gh/hosts.yml', home/'.ssh/authorized_keys']:
-    assert not forbidden.exists(), f'Unexpected credential/access file: {forbidden}'
-for path in [home/'.cache', Path('/root/.cache'), Path('/var/lib/apt/lists')]:
-    if path.exists():
-        shutil.rmtree(path)
-for path in [home/'.bash_history', Path('/root/.bash_history')]:
-    path.unlink(missing_ok=True)
-for path in Path('/etc/ssh').glob('ssh_host_*'):
-    path.unlink()
-Path('/etc/machine-id').write_text('')
-Path('/var/lib/dbus/machine-id').unlink(missing_ok=True)
-Path('/var/lib/dbus/machine-id').symlink_to('/etc/machine-id')
-Path('/etc/agent-base-builder').unlink()
-PY
+python3 /home/dev/dotfiles/scripts/prepare-agent-image.py
 apt-get clean
 ROOT
 incus stop "$builder" --timeout 30

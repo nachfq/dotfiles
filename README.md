@@ -39,6 +39,60 @@ The old chezmoi source state is preserved in the
 [`legacy-chezmoi-2026-11-05`](https://github.com/nachfq/dotfiles/tree/legacy-chezmoi-2026-11-05)
 tag. The current branch uses ordinary files and symlinks; chezmoi is not required.
 
+## Create and open environments from the laptop
+
+Install only the laptop command, without applying the Ubuntu shell profile:
+
+```bash
+~/dotfiles/setup-agent.sh install-client
+agent-env new demo
+agent-env new another-project https://github.com/OWNER/REPOSITORY.git
+agent-env list
+agent-env open demo
+agent-env remove demo
+```
+
+Run these from the laptop's Herdr. The default host is `nacho@homelab`; override
+`AGENT_ENV_HOST` if needed. The host must have the existing `agent-pilot` profile,
+its Incus bridge/firewall setup, and the private `agent-base` image.
+
+Each new environment is named `dev-NAME` on Incus. It receives only the laptop's
+SSH public key. SSH uses a ProxyJump through homelab and pins the environment's
+host key obtained through Incus. Managed connection entries are kept in
+`~/.ssh/agent-env.conf` and `~/.ssh/agent-env_known_hosts`; the first use adds an
+Include to `~/.ssh/config` after making a backup.
+
+The command adds `homelab / NAME` to Herdr and prepares a project workspace with
+Neovim on the right and a shell on the left. First sign into GitHub and Codex in
+that shell, then run `codex`. A repository that requires authentication can be
+cloned after login. Credentials belong to that environment and are not shared.
+`open` starts a stopped environment and reconnects without duplicating the
+workspace. Environments retain the profile's manual-start policy after reboot.
+
+`remove` permanently deletes that environment's filesystem and its managed
+connection entries. It refuses to operate on instances not created by this
+command, including the original `agent-pilot`.
+
+## Build the base image
+
+From the laptop, with this checkout committed and pushed:
+
+```bash
+revision=$(git -C ~/dotfiles rev-parse HEAD)
+ssh nacho@homelab "bash -s -- $revision" < ~/dotfiles/scripts/build-agent-image.sh
+```
+
+The recipe provisions a fresh Ubuntu 24.04 instance from the public dotfiles
+commit, installs the common tools and plugins, and publishes a private image.
+`agent-base` points to the latest successful build; a dated commit-specific alias
+preserves the exact build. A failed builder is kept for diagnosis; a successful
+builder is deleted. The recipe never publishes the working `agent-pilot`.
+
+The image has no project checkout, logins, authorized SSH keys, host SSH keys or
+machine ID. `agent-env new` provisions access and generates unique host keys for
+each instance. `dev` has sudo inside each environment. Rust toolchains, browser
+downloads, Docker and project services are added only where needed.
+
 ## Apply configuration
 
 Run as your regular user, inside the environment where the tools will run:
@@ -63,6 +117,7 @@ environment, install the editor tools first:
 ```bash
 ./setup-agent.sh install-tools
 ./setup-agent.sh apply
+./setup-agent.sh install-runtimes
 ./setup-agent.sh install-codex
 ./setup-agent.sh configure-codex
 ./setup-agent.sh install-herdr
@@ -74,13 +129,19 @@ run that step from the Incus host, replacing `ENVIRONMENT` and the user path:
 
 ```bash
 incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh install-tools
+incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh grant-sudo
 ```
 
-Then run `apply`, `install-codex`, `configure-codex`, `install-herdr` and `plugins` as `dev` inside that environment. The installer
+Run `grant-sudo` as root inside Incus too; it gives `dev` passwordless sudo
+inside that environment so agents can install project dependencies themselves.
+It refuses to run outside Incus and does not grant any permissions on the host.
+
+Then run `apply`, `install-runtimes`, `install-codex`, `configure-codex`, `install-herdr` and `plugins` as `dev` inside that environment. The installer
 checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
-LazyGit 0.66.2, Node.js 24.22.2, Starship 1.27.0, and GitHub CLI 2.103.3.
+LazyGit 0.66.2, dua 3.0.0, Starship 1.27.0, and GitHub CLI 2.103.3.
 Supporting system packages,
-including Eza, Bash completion, Bubblewrap and AppArmor, come from Ubuntu.
+including Eza, Bash completion, fzf, bat, zoxide, btop, rsync, pkgconf,
+Bubblewrap and AppArmor, come from Ubuntu.
 The installer loads `config/apparmor/dotfiles-bwrap`, which permits Bubblewrap
 to create user namespaces without disabling Ubuntu's AppArmor restriction globally.
 Authentication and project-specific toolchains are configured separately.
@@ -89,6 +150,12 @@ user data directory (English is bundled), restores the Neovim plugins, and waits
 for the configured Mason tools and Tree-sitter parsers to finish installing. Additional
 language servers and tools may download when their language integration is first
 used; language toolchains such as Rust are project dependencies.
+
+`install-runtimes` uses the official mise and uv installers, then installs Node LTS
+and npm through mise. The shell activates mise and zoxide. mise can select other
+versions for individual projects. Rust, browsers, Docker and databases are not
+installed by this base profile. Ubuntu's `batcat` and `fdfind` are also available
+through the usual `bat` and `fd` commands.
 
 `install-codex` runs the official command as the regular user, without pinning a
 version or assembling the package manually:

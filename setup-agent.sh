@@ -6,11 +6,12 @@ config_dir=${XDG_CONFIG_HOME:-$HOME/.config}
 
 usage() {
   cat <<'HELP'
-Usage: ./setup-agent.sh [apply|install-tools|install-runtimes|grant-sudo|install-codex|configure-codex|install-herdr|plugins]
+Usage: ./setup-agent.sh [apply|install-client|install-tools|install-runtimes|grant-sudo|install-codex|configure-codex|install-herdr|plugins]
 
   apply          Link Neovim, Herdr, Starship and Bash configuration.
                  Add a single source line to .bashrc for the shared shell setup.
                  Existing files are backed up before replacement. (Default.)
+  install-client  Link the laptop's agent-env command; does not apply configs.
   install-tools  Install development tools and gh on Ubuntu Linux x86_64.
                  Requires root or sudo; does not apply user configuration.
   install-runtimes  Install mise, Node LTS/npm and uv as the regular user.
@@ -214,6 +215,22 @@ prepare_spelling() (
 
 case "${1:-apply}" in
   apply) apply_config ;;
+  install-client)
+    if (( EUID == 0 )); then
+      printf 'Run install-client as your laptop user.\n' >&2
+      exit 1
+    fi
+    mkdir -p "$HOME/.local/bin"
+    client="$HOME/.local/bin/agent-env"
+    if [[ -e "$client" || -L "$client" ]]; then
+      [[ -L "$client" && $(readlink "$client") == "$repo_dir/scripts/agent-env.py" ]] || {
+        printf 'Existing command at %s; refusing to replace it.\n' "$client" >&2
+        exit 1
+      }
+    else
+      ln -s "$repo_dir/scripts/agent-env.py" "$client"
+    fi
+    ;;
   install-tools) install_tools ;;
   install-runtimes) install_runtimes ;;
   grant-sudo) grant_sudo ;;
