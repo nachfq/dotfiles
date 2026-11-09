@@ -56,6 +56,7 @@ apply_config() {
   link_config "$repo_dir/config/herdr/helpers" "$config_dir/herdr/helpers" herdr-helpers
   link_config "$repo_dir/config/bash/worktrees.bash" "$config_dir/bash/worktrees.bash" worktrees.bash
   link_config "$repo_dir/config/bash/interactive.bash" "$config_dir/bash/interactive.bash" interactive.bash
+  link_config "$repo_dir/config/bash/gh-headless" "$config_dir/bash/gh-headless" gh-headless
   link_config "$repo_dir/config/bash/inputrc" "$config_dir/bash/inputrc" inputrc
   link_config "$repo_dir/config/starship.toml" "$config_dir/starship.toml" starship.toml
   local source_line='[[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bash/interactive.bash" ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/bash/interactive.bash"'

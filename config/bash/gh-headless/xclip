@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""Write-only xclip adapter for gh in headless terminal sessions.
+
+Added to PATH only for interactive gh auth commands. The real desktop clipboard
+is reached via OSC 52, not an X server inside the container.
+"""
+
+import base64
+import sys
+
+
+def main():
+    if sys.argv[1:] != ["-in", "-selection", "clipboard"]:
+        raise ValueError("This gh adapter supports clipboard writes only.")
+    data = sys.stdin.buffer.read(65537)
+    if len(data) > 65536:
+        raise ValueError("Clipboard payload exceeds 64 KiB.")
+    # gh discards clipboard-helper stdout, so write to the controlling terminal.
+    with open("/dev/tty", "wb") as tty:
+        tty.write(b"\x1b]52;c;" + base64.b64encode(data) + b"\x07")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (OSError, ValueError) as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)

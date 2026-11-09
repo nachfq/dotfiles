@@ -271,6 +271,17 @@ Open the printed URLs on the laptop and complete each authorization. Codex devic
 code login may need to be enabled in the account's security settings. Use
 `gh auth status` and `codex login status` to inspect the result.
 
+For interactive `gh auth login` and `gh auth refresh` in headless Incus
+environments, the shared Bash setup forwards clipboard writes through the
+terminal with OSC 52. It uses a write-only adapter scoped to those commands;
+other programs keep their normal clipboard tools. With an attached Herdr client
+and an outer terminal that permits OSC 52, the device code reaches the laptop's
+clipboard. After Enter, Ctrl-click the displayed web link in Herdr and paste the
+code in the laptop's browser. Browser opening is deliberately manual; there is
+no desktop service or credential forwarding. Explicit `GH_BROWSER` / `BROWSER`
+settings still take precedence. Existing shells need `source ~/.bashrc` after
+pulling the update and running `./setup-agent.sh apply`.
+
 Credentials stay in that environment's standard user storage. Restarting the
 environment preserves them; deleting it removes the local copies. A new
 environment requires new sign-ins. Credentials are not mounted from the Incus

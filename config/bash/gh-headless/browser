@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Present a browser link for the local Herdr client instead of remote xdg-open."""
+
+import sys
+from urllib.parse import urlsplit
+
+
+def main():
+    if len(sys.argv) != 2:
+        raise ValueError("Expected one web URL.")
+    url = sys.argv[1]
+    if any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in url):
+        raise ValueError("Control characters are not allowed in a browser URL.")
+    parsed = urlsplit(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Expected an http(s) URL.")
+    print("\nAbrí este enlace con Ctrl+clic en Herdr y pegá el código:")
+    print(f"\x1b]8;;{url}\x1b\\{url}\x1b]8;;\x1b\\")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)

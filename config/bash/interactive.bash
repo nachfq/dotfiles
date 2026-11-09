@@ -25,6 +25,21 @@ source "${XDG_CONFIG_HOME:-$HOME/.config}/bash/worktrees.bash"
 
 export EDITOR=nvim
 export VISUAL=nvim
+
+# Keep GitHub's device login in the container, with clipboard writes forwarded
+# through the terminal and a clickable browser URL. Scope the xclip adapter to
+# auth commands so other programs keep their normal clipboard behavior.
+gh() {
+  local helpers="${XDG_CONFIG_HOME:-$HOME/.config}/bash/gh-headless"
+  if [[ -e /dev/incus && -z ${DISPLAY:-} && -z ${WAYLAND_DISPLAY:-}
+        && ${1:-} == auth && ( ${2:-} == login || ${2:-} == refresh )
+        && -x "$helpers/xclip" && -x "$helpers/browser" ]]; then
+    PATH="$helpers:$PATH" GH_BROWSER="${GH_BROWSER:-${BROWSER:-$helpers/browser}}" command gh "$@"
+  else
+    command gh "$@"
+  fi
+}
+
 if command -v eza >/dev/null; then
   alias ls='eza -lh --group-directories-first --icons=auto'
   alias lsa='ls -a'
