@@ -13,6 +13,8 @@ my configuration files and the script that applies them.
 | `config/herdr/config.toml` and `helpers/` | Matching paths under `~/.config/herdr/` |
 | `config/bash/` | Selected files under `~/.config/bash/` |
 | `config/starship.toml` | `~/.config/starship.toml` |
+| `config/hypr/bindings.lua` | `~/.config/hypr/bindings.lua` (laptop only) |
+| `config/omarchy/shell.json` | `~/.config/omarchy/shell.json` (laptop only) |
 
 - `apply.sh`: links config files with backups; its `plugins` command prepares the
   dependencies associated with this Neovim configuration.
@@ -91,6 +93,22 @@ them. Running environments have their own checkout; they do not live-sync files
 from the laptop. Images record the dotfiles revision used for their build.
 
 ## Desktop and remote behavior
+
+The laptop's Hyprland shortcuts and Omarchy bar layout are also versioned here.
+Their active files are symlinks to this checkout, so editing either location
+appears in `git diff`. `apply.sh` deliberately applies only the shared development
+configuration; it does not install or link these desktop files in containers.
+On the laptop, link these two files individually after backing up existing files.
+The remaining Omarchy desktop configuration continues to use the installed
+defaults and local settings.
+
+The bar layout uses two separately maintained plugins:
+[nachfq.agents](https://github.com/nachfq/omarchy-agents) and
+[nachfq.yuragi](https://github.com/nachfq/omarchy-yuragi). Install them according
+to their repositories before reusing the layout on another Omarchy desktop.
+Plugin source, usage statistics and authentication are not stored in dotfiles.
+Personal shell startup files (`.bashrc`, `.bash_profile`, `.profile`, `.zshrc`)
+and the monitor arrangement remain local and are not versioned here.
 
 On Omarchy, Neovim loads the generated active theme from its standard state
 directory and watches theme selections for live reloading. On other systems it

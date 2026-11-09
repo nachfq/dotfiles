@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "idle": {
+    "screensaver": 150,
+    "lock": 300
+  },
+  "bar": {
+    "position": "top",
+    "transparent": true,
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [
+        {
+          "id": "omarchy.menu"
+        },
+        {
+          "id": "omarchy.workspaces"
+        }
+      ],
+      "center": [
+        {
+          "id": "omarchy.indicators"
+        },
+        {
+          "id": "nachfq.yuragi",
+          "master": 1,
+          "volumes": {
+            "rain": 1,
+            "thunder": 1,
+            "waves": 0.9612223307291666,
+            "wind": 0,
+            "fire": 1,
+            "birds": 0.09814453125,
+            "crickets": 1,
+            "coffee": 0,
+            "bowl": 0.06917317708333333,
+            "noise": 0.5610555013020834
+          },
+          "randomize": false
+        },
+        {
+          "id": "omarchy.clock",
+          "format": "dddd HH:mm",
+          "formatAlt": "d MMMM 'W'ww yyyy",
+          "verticalFormat": "HH\n—\nmm"
+        },
+        {
+          "id": "omarchy.keyboard-layout"
+        },
+        {
+          "id": "omarchy.weather"
+        },
+        {
+          "id": "omarchy.system-update"
+        }
+      ],
+      "right": [
+        {
+          "id": "omarchy.tray"
+        },
+        {
+          "id": "omarchy.tailscale"
+        },
+        {
+          "id": "nachfq.agents",
+          "refreshIntervalSec": 60
+        },
+        {
+          "id": "omarchy.bluetooth"
+        },
+        {
+          "id": "omarchy.network"
+        },
+        {
+          "id": "omarchy.audio"
+        },
+        {
+          "id": "omarchy.monitor"
+        },
+        {
+          "id": "omarchy.power"
+        }
+      ]
+    }
+  },
+  "plugins": []
+}
