@@ -1,238 +1,94 @@
-# Development dotfiles
+# Personal development dotfiles
 
-Shared terminal development configuration for my Omarchy laptop and disposable
-Ubuntu environments managed by Incus.
-
-## Repository layout and setup profiles
-
-Git versions the ordinary files under `config/`. They do not have to be scattered
-through the home directory inside this repository: the setup script connects
-them to each application's expected location using symlinks.
-
-| Versioned source | Location used by the application |
-| --- | --- |
-| `config/nvim/` | `~/.config/nvim/` |
-| `config/herdr/config.toml` and `helpers/` | The matching paths under `~/.config/herdr/` |
-| `config/bash/` | The selected files under `~/.config/bash/` |
-| `config/starship.toml` | `~/.config/starship.toml` |
-
-`setup-agent.sh` is the Ubuntu agent-environment profile. It installs terminal
-development tools and applies the shared editor/shell configuration. There is no
-desktop setup script yet. Desktop-only configuration can also live under
-`config/`; a separate desktop profile can select those files without installing
-a desktop inside the agent environments. Shared configurations remain single
-files rather than separate copies for each profile.
+Shared editor and terminal configuration used by my Omarchy laptop and disposable
+agent environments. [Factory](https://github.com/nachfq/factory) installs tools,
+configures agents and builds/manages the Incus environments; this repository owns
+my configuration files and the script that applies them.
 
 ## Contents
 
-- `config/nvim`: the current LazyVim configuration, personal mappings, Rust and
-  Markdown extras, Herdr integration, and `lazy-lock.json` for plugin revisions.
-- `config/herdr`: Herdr keybindings and navigation/font helpers. Commands use the
-  current user's config directory rather than a laptop-specific home path.
-- `config/bash/worktrees.bash`: the `cdworktree` / `cdw` command and completion.
-- `config/bash/interactive.bash` and `inputrc`: portable Bash history, completion,
-  navigation aliases and Readline bindings adapted from the laptop's Omarchy setup.
-- `config/starship.toml`: the laptop's prompt, directory and Git status styling.
-- `setup-agent.sh`: explicit tool installation, configuration linking, and plugin setup.
+| Versioned source | Application location |
+| --- | --- |
+| `config/nvim/` | `~/.config/nvim/` |
+| `config/herdr/config.toml` and `helpers/` | Matching paths under `~/.config/herdr/` |
+| `config/bash/` | Selected files under `~/.config/bash/` |
+| `config/starship.toml` | `~/.config/starship.toml` |
 
-The old chezmoi source state is preserved in the
-[`legacy-chezmoi-2026-11-05`](https://github.com/nachfq/dotfiles/tree/legacy-chezmoi-2026-11-05)
-tag. The current branch uses ordinary files and symlinks; chezmoi is not required.
+- `apply.sh`: links config files with backups; its `plugins` command prepares the
+  dependencies associated with this Neovim configuration.
+- `scripts/prepare-nvim.lua`: waits for the configured Mason tools and parsers.
+- `scripts/tests/`: checks for the headless GitHub clipboard/browser helpers and
+  configuration application.
 
-## Create and open environments from the laptop
-
-Install only the laptop command, without applying the Ubuntu shell profile:
-
-```bash
-~/dotfiles/setup-agent.sh install-client
-agent-env new demo
-agent-env new another-project https://github.com/OWNER/REPOSITORY.git
-agent-env list
-agent-env open demo
-agent-env remove demo
-```
-
-Run these from the laptop's Herdr. The default host is `nacho@homelab`; override
-`AGENT_ENV_HOST` if needed. The host must have the existing `agent-pilot` profile,
-its Incus bridge/firewall setup, and the private `agent-base` image.
-The [Factory Incus recipe](https://github.com/nachfq/factory/tree/main/infra/incus)
-records how to recreate that host configuration on another server.
-Use Incus 6.0.1 or newer: 6.0.0 has an upstream image-unpacking bug that skips
-folders named `dev`, including `/home/dev`. `new` refuses that server version.
-
-Each new environment is named `dev-NAME` on Incus. It receives only the laptop's
-SSH public key for access, plus Git's name/email when configured on the laptop.
-SSH uses a ProxyJump through homelab and pins the environment's
-host key obtained through Incus. Managed connection entries are kept in
-`~/.ssh/agent-env.conf` and `~/.ssh/agent-env_known_hosts`; the first use adds an
-Include to `~/.ssh/config` after making a backup.
-
-The command adds `homelab / NAME` to Herdr and prepares a project workspace with
-Neovim on the right and a shell on the left. First sign into GitHub and Codex in
-that shell, then run `codex`. A repository that requires authentication can be
-cloned after login. Credentials belong to that environment and are not shared.
-`open` starts a stopped environment and reconnects without duplicating the
-connection or workspace. After an environment restart it starts Herdr again and
-restores the project editor in its managed pane. Existing running panes are left
-alone. Environments retain the profile's manual-start policy after host reboot.
-
-`remove` permanently deletes that environment's filesystem and its managed
-connection entries. It refuses to operate on instances not created by this
-command, including the original `agent-pilot`.
-
-The SSH first-boot regression check uses the real image on homelab. It creates
-and deletes a uniquely named test environment without adding Herdr connections:
-
-```bash
-AGENT_ENV_INTEGRATION=1 python3 -m unittest discover -s scripts/tests -v
-```
-
-## Build the base image
-
-Image construction and host configuration now live in
-[Factory's Incus recipe](https://github.com/nachfq/factory/tree/main/infra/incus).
-Follow its build instructions with the published Factory and dotfiles commits.
-This repository supplies `setup-agent.sh` and the shared configuration used by
-the builder; Factory owns the build script and image cleanup helper.
-
-The image has no project checkout, logins, authorized SSH keys, host SSH keys or
-machine ID. `agent-env new` provisions access and generates unique host keys for
-each instance. `dev` has sudo inside each environment. Rust toolchains, browser
-downloads, Docker and project services are added only where needed.
+The old chezmoi state is preserved in
+[`legacy-chezmoi-2026-11-05`](https://github.com/nachfq/dotfiles/tree/legacy-chezmoi-2026-11-05).
+The current checkout uses ordinary files and symlinks; chezmoi is not required.
 
 ## Apply configuration
 
-Run as your regular user, inside the environment where the tools will run:
+As the regular user inside a prepared environment:
 
 ```bash
 git clone https://github.com/nachfq/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-./setup-agent.sh apply
+./apply.sh apply
+./apply.sh plugins
 ```
 
-The script links Neovim's configuration directory and individual Herdr/Bash/Starship
-configuration paths. It preserves Herdr's runtime directory, sockets, logs and
-saved sessions. Existing configuration is backed up under
-`~/.local/state/dotfiles/backups/` (or `$XDG_STATE_HOME/dotfiles/backups/`). Applying
-the same checkout again leaves existing matching symlinks alone. It adds one
-source line to `~/.bashrc`, preserving a backup before the first change. A new Bash
-shell loads the shared prompt and helper configuration.
+`apply` links the versioned configs and adds one source line for the shared Bash
+setup to the existing `.bashrc`, preserving that file and backing up conflicts.
+It leaves Herdr's sessions, sockets and logs in their existing locations.
+Configuration backups live under `~/.local/state/dotfiles/backups/`.
+The laptop's existing config symlinks keep pointing to the same files during
+this migration. Applying the full shared Bash setup is an explicit choice;
+there is no Omarchy installation step.
 
-The laptop already supplies its tools through Omarchy. For a new **Ubuntu x86_64**
-environment, install the editor tools first:
+`plugins` downloads Spanish spelling files, restores `lazy-lock.json` revisions
+and waits for the configured Mason tools and Tree-sitter parsers. It preserves
+the original lockfile even if Lazy's first bootstrap rewrites it. This step
+requires the editor/build tools installed by Factory.
+
+Factory can apply another dotfiles checkout through the same two-command
+interface. For this checkout, its command is:
 
 ```bash
-./setup-agent.sh install-tools
-./setup-agent.sh apply
-./setup-agent.sh install-runtimes
-./setup-agent.sh install-codex
-./setup-agent.sh configure-codex
-./setup-agent.sh install-herdr
-./setup-agent.sh plugins
+/path/to/factory/setup-agent.sh apply-dotfiles ~/dotfiles
 ```
 
-`install-tools` requires root or sudo. When the container user does not have sudo,
-run that step from the Incus host, replacing `ENVIRONMENT` and the user path:
+## Tools, agents and images
+
+Those installation steps now live in
+[Factory's agent setup](https://github.com/nachfq/factory/blob/main/docs/agent-setup.md).
+The image recipe and exact Incus host configuration are documented in
+[Factory's Incus recipe](https://github.com/nachfq/factory/tree/main/infra/incus).
+The former `setup-agent.sh`, `agent-env` source, Codex-defaults helper and AppArmor
+policy have moved there. Install the laptop's command from Factory:
 
 ```bash
-incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh install-tools
-incus exec ENVIRONMENT -- bash /home/dev/dotfiles/setup-agent.sh grant-sudo
+cd /path/to/factory
+./setup-agent.sh install-client
 ```
 
-Run `grant-sudo` as root inside Incus too; it gives `dev` passwordless sudo
-inside that environment so agents can install project dependencies themselves.
-It refuses to run outside Incus and does not grant any permissions on the host.
-
-Then run `apply`, `install-runtimes`, `install-codex`, `configure-codex`, `install-herdr` and `plugins` as `dev` inside that environment. The installer
-checks archive SHA-256 digests and pins Neovim 0.12.6, Tree-sitter CLI 0.27.1,
-LazyGit 0.66.2, dua 3.0.0, Starship 1.27.0, and GitHub CLI 2.103.3.
-Supporting system packages,
-including Eza, Bash completion, fzf, bat, zoxide, btop, rsync, pkgconf,
-Bubblewrap and AppArmor, come from Ubuntu.
-The installer loads `config/apparmor/dotfiles-bwrap`, which permits Bubblewrap
-to create user namespaces without disabling Ubuntu's AppArmor restriction globally.
-Authentication and project-specific toolchains are configured separately.
-`plugins` downloads the Spanish spelling dictionary and suggestions to Neovim's
-user data directory (English is bundled), restores the Neovim plugins, and waits
-for the configured Mason tools and Tree-sitter parsers to finish installing. Additional
-language servers and tools may download when their language integration is first
-used; language toolchains such as Rust are project dependencies.
-
-`install-runtimes` uses the official mise and uv installers, then installs Node LTS
-and npm through mise. The shell activates mise and zoxide. mise can select other
-versions for individual projects. Rust, browsers, Docker and databases are not
-installed by this base profile. Ubuntu's `batcat` and `fdfind` are also available
-through the usual `bat` and `fd` commands.
-
-`install-codex` runs the official command as the regular user, without pinning a
-version or assembling the package manually:
-
-```bash
-curl -fsSL https://chatgpt.com/codex/install.sh | sh
-```
-
-The official installer manages the complete package and installs the command in
-`~/.local/bin`. Run `install-codex` again to update to the latest release, then
-open a new Bash shell. After installation, this command checks the runtime path
-as the regular user without making a model request:
-
-```bash
-codex app-server daemon start
-```
-
-`configure-codex` sets `model = "gpt-6.1-sol"` and
-`model_reasoning_effort = "high"`. It also sets the environment user's default
-`sandbox_mode` to `danger-full-access` and `approval_policy` to `never`: the
-equivalent of YOLO. `agent-env new` applies the laptop's version of these
-defaults after provisioning, including when its cached base image is older.
-It preserves existing settings and hook trust, backs up changes, and leaves
-authentication files alone. Restart Codex after changing these defaults.
-Run this step inside the agent environment; the Incus container provides the
-isolation. This step is separate from `apply`, so sharing editor and shell
-configuration with the laptop does not change its Codex permissions.
-
-If you choose to use Codex's internal Linux sandbox as well, enable nesting
-on that instance from the Incus host:
-
-```bash
-incus config set ENVIRONMENT security.nesting=true
-```
-
-This relaxes the container's AppArmor restrictions for nested sandboxes; keep
-`security.privileged=false` and the isolated ID mapping. Verify command execution
-inside the environment without making a model request:
-
-```bash
-codex sandbox -c 'permissions.check.extends=":workspace"' -P check -C ~/PROJECT -- /bin/true
-```
-
-`install-herdr` runs Herdr's official installer and `herdr integration install codex`.
-The integration installs Herdr's agent-status hooks in the user's Codex configuration;
-Codex may ask you to trust them when starting a session. SSH access and the saved
-machine connection in the laptop's Herdr are configured separately.
-
-Once the setup is stable, build a reusable image before signing into GitHub or
-Codex. Keep this script as the recipe for rebuilding and updating that image.
-
-The shell setup enables the Bash worktree helper automatically. It preserves the
-existing `.bashrc` instead of replacing it with an Omarchy-specific startup file.
+For an existing command symlink from dotfiles, use `install-client --replace`.
+It preserves the old symlink in a backup. This command does not apply dotfiles or
+install Ubuntu tools on the laptop. Existing environment connections/state remain
+where they were.
 
 ## Update and edit
 
-Configuration paths are symlinks into this checkout, so ordinary configuration
-edits appear in `git diff` here. Review and commit intended changes, then push.
-On another environment:
+Symlinked configuration edits appear in `git diff` in this checkout. Review,
+commit and push intended changes. On another environment:
 
 ```bash
 cd ~/dotfiles
 git pull --ff-only
-./setup-agent.sh apply
-./setup-agent.sh plugins
+./apply.sh apply
+./apply.sh plugins
 ```
 
-Avoid editing the shared configuration simultaneously while pulling updates.
-`lazy-lock.json` records plugin revisions; commit deliberate plugin updates with
-the configuration changes that need them.
+Commit deliberate plugin lock updates with the configuration changes that need
+them. Running environments have their own checkout; they do not live-sync files
+from the laptop. Images record the dotfiles revision used for their build.
 
 ## Desktop and remote behavior
 
@@ -278,7 +134,7 @@ clipboard. After Enter, Ctrl-click the displayed web link in Herdr and paste the
 code in the laptop's browser. Browser opening is deliberately manual; there is
 no desktop service or credential forwarding. Explicit `GH_BROWSER` / `BROWSER`
 settings still take precedence. Existing shells need `source ~/.bashrc` after
-pulling the update and running `./setup-agent.sh apply`.
+pulling the update and running `./apply.sh apply`.
 
 Credentials stay in that environment's standard user storage. Restarting the
 environment preserves them; deleting it removes the local copies. A new
