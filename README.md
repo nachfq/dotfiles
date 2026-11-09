@@ -78,6 +78,13 @@ alone. Environments retain the profile's manual-start policy after host reboot.
 connection entries. It refuses to operate on instances not created by this
 command, including the original `agent-pilot`.
 
+The SSH first-boot regression check uses the real image on homelab. It creates
+and deletes a uniquely named test environment without adding Herdr connections:
+
+```bash
+AGENT_ENV_INTEGRATION=1 python3 -m unittest discover -s scripts/tests -v
+```
+
 ## Build the base image
 
 From the laptop, with this checkout committed and pushed:

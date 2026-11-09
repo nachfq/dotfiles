@@ -225,11 +225,17 @@ def create(name, repo):
     incus("launch", IMAGE, instance, "-p", "agent-pilot", "-c", "user.agent-env=true",
           "-c", "user.agent-env.name=" + name, "-c", "user.agent-env.cwd=" + cwd)
     print(f"Created {instance}. Preparing SSH...")
+    # First boot can exhaust SSH's restart limit before this keyless image is
+    # provisioned. Stop both units first to avoid racing its automatic retries.
     incus("exec", instance, "--", "sh", "-ec",
+          'systemctl stop ssh.socket ssh.service; '
           'ssh-keygen -A; install -d -m 700 -o dev -g dev /home/dev/.ssh; '
           'cat > /home/dev/.ssh/authorized_keys; '
           'chown dev:dev /home/dev/.ssh/authorized_keys; '
-          'chmod 600 /home/dev/.ssh/authorized_keys; systemctl restart ssh', text=key.read_text())
+          'chmod 600 /home/dev/.ssh/authorized_keys; '
+          'systemctl reset-failed ssh.service ssh.socket; '
+          'systemctl start ssh.service; '
+          'systemctl is-active --quiet ssh.service', text=key.read_text())
     # The first published base used a detached build revision. Restore the local
     # main branch without fetching or changing the image's versioned contents.
     incus("exec", instance, "--", "runuser", "-u", "dev", "--",
