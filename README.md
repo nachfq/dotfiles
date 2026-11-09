@@ -55,6 +55,8 @@ agent-env remove demo
 Run these from the laptop's Herdr. The default host is `nacho@homelab`; override
 `AGENT_ENV_HOST` if needed. The host must have the existing `agent-pilot` profile,
 its Incus bridge/firewall setup, and the private `agent-base` image.
+The [Factory Incus recipe](https://github.com/nachfq/factory/tree/main/infra/incus)
+records how to recreate that host configuration on another server.
 Use Incus 6.0.1 or newer: 6.0.0 has an upstream image-unpacking bug that skips
 folders named `dev`, including `/home/dev`. `new` refuses that server version.
 
@@ -87,18 +89,11 @@ AGENT_ENV_INTEGRATION=1 python3 -m unittest discover -s scripts/tests -v
 
 ## Build the base image
 
-From the laptop, with this checkout committed and pushed:
-
-```bash
-revision=$(git -C ~/dotfiles rev-parse HEAD)
-ssh nacho@homelab "bash -s -- $revision" < ~/dotfiles/scripts/build-agent-image.sh
-```
-
-The recipe provisions a fresh Ubuntu 24.04 instance from the public dotfiles
-commit, installs the common tools and plugins, and publishes a private image.
-`agent-base` points to the latest successful build; a dated commit-specific alias
-preserves the exact build. A failed builder is kept for diagnosis; a successful
-builder is deleted. The recipe never publishes the working `agent-pilot`.
+Image construction and host configuration now live in
+[Factory's Incus recipe](https://github.com/nachfq/factory/tree/main/infra/incus).
+Follow its build instructions with the published Factory and dotfiles commits.
+This repository supplies `setup-agent.sh` and the shared configuration used by
+the builder; Factory owns the build script and image cleanup helper.
 
 The image has no project checkout, logins, authorized SSH keys, host SSH keys or
 machine ID. `agent-env new` provisions access and generates unique host keys for
