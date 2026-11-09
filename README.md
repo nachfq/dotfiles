@@ -185,8 +185,11 @@ as the regular user without making a model request:
 codex app-server daemon start
 ```
 
-`configure-codex` sets the environment user's default `sandbox_mode` to
-`danger-full-access` and `approval_policy` to `never`: the equivalent of YOLO.
+`configure-codex` sets `model = "gpt-6.1-sol"` and
+`model_reasoning_effort = "high"`. It also sets the environment user's default
+`sandbox_mode` to `danger-full-access` and `approval_policy` to `never`: the
+equivalent of YOLO. `agent-env new` applies the laptop's version of these
+defaults after provisioning, including when its cached base image is older.
 It preserves existing settings and hook trust, backs up changes, and leaves
 authentication files alone. Restart Codex after changing these defaults.
 Run this step inside the agent environment; the Incus container provides the

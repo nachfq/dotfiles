@@ -18,7 +18,7 @@ Usage: ./setup-agent.sh [apply|install-client|install-tools|install-runtimes|gra
   grant-sudo     Allow dev to install packages without a password inside Incus.
                  Run as root inside the disposable environment only.
   install-codex  Install/update Codex using the official installer as this user.
-  configure-codex  Default Codex to full access without approval prompts (YOLO).
+  configure-codex  Default Codex to GPT-6.1 Sol / high with full access (YOLO).
                    Run only inside the disposable agent environment.
   install-herdr  Install/update Herdr and its Codex status integration as this user.
   plugins        Restore Neovim plugins, tools, parsers and Spanish spelling files.

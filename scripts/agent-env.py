@@ -256,6 +256,9 @@ def create(name, repo):
             incus("exec", instance, "--", "install", "-d", "-o", "dev", "-g", "dev", cwd)
     else:
         incus("exec", instance, "--", "install", "-d", "-o", "dev", "-g", "dev", cwd)
+    # Apply the laptop's versioned defaults even when the cached image is older.
+    incus("exec", instance, "--", "runuser", "-u", "dev", "--", "python3", "-",
+          text=Path(__file__).resolve().with_name("configure-codex.py").read_text())
     incus("config", "device", "override", instance, "eth0", "ipv4.address=" + address)
     connect(name)
 

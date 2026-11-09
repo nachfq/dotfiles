@@ -1,5 +1,6 @@
 """Set Codex defaults for disposable agent environments, preserving local settings."""
 
+import json
 import os
 from pathlib import Path
 import re
@@ -13,18 +14,23 @@ codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expandus
 config = codex_home / "config.toml"
 source = config.read_text() if config.exists() else ""
 before = tomllib.loads(source)
-defaults = {"sandbox_mode": "danger-full-access", "approval_policy": "never"}
+defaults = {
+    "model": "gpt-6.1-sol",
+    "model_reasoning_effort": "high",
+    "sandbox_mode": "danger-full-access",
+    "approval_policy": "never",
+}
 
 if all(before.get(key) == value for key, value in defaults.items()):
-    print("Codex already defaults to full access without approval prompts.")
+    print("Codex already defaults to GPT-6.1 Sol / high with full access.")
 else:
     # Only edit root assignments; preserve tables, comments and hook trust records.
     lines = source.splitlines(keepends=True)
     boundary = next((i for i, line in enumerate(lines) if line.lstrip().startswith("[")), len(lines))
-    root = [line for line in lines[:boundary]
-            if not re.match(r"^\s*(sandbox_mode|approval_policy)\s*=", line)]
-    updated = ('sandbox_mode = "danger-full-access"\n'
-               'approval_policy = "never"\n\n' + "".join(root + lines[boundary:]))
+    assignment = re.compile(r"^\s*(" + "|".join(map(re.escape, defaults)) + r")\s*=")
+    root = [line for line in lines[:boundary] if not assignment.match(line)]
+    updated = ("".join(f"{key} = {json.dumps(value)}\n" for key, value in defaults.items())
+               + "\n" + "".join(root + lines[boundary:]))
     # Refuse to write if anything except the requested defaults would change.
     if tomllib.loads(updated) != before | defaults:
         raise SystemExit("Could not preserve this config layout; config.toml was not changed.")
@@ -42,4 +48,4 @@ else:
         temporary.replace(config)
     finally:
         temporary.unlink(missing_ok=True)
-    print(f"Configured {config}: full access, no approval prompts. Restart Codex to apply.")
+    print(f"Configured {config}: GPT-6.1 Sol / high, full access, no approval prompts. Applies to new Codex sessions.")

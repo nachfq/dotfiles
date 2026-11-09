@@ -5,6 +5,7 @@ Run on the laptop with AGENT_ENV_INTEGRATION=1 python3 -m unittest discover
 """
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import unittest
@@ -59,6 +60,11 @@ class FirstBootSshTest(unittest.TestCase):
                                    "/home/dev/.ssh/authorized_keys"),
                              (agent_env.SSH_DIR / "id_ed25519.pub").read_text().strip())
             incus("exec", instance, "--", "test", "-d", "/home/dev/" + name)
+            config = json.loads(incus("exec", instance, "--", "python3", "-c",
+                                     'import json,tomllib; print(json.dumps(tomllib.load('
+                                     'open("/home/dev/.codex/config.toml", "rb"))))'))
+            self.assertEqual(config["model"], "gpt-6.1-sol")
+            self.assertEqual(config["model_reasoning_effort"], "high")
         finally:
             if created:
                 item = agent_env.managed(name)
