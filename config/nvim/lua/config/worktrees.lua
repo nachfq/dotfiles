@@ -180,6 +180,19 @@ function M.stop()
 end
 
 function M.setup()
+  local git_status = require("neo-tree.git")
+  local original_status = git_status.status
+  if not git_status._worktree_review_status then
+    -- Neo-tree's cached status can omit the comparison against the selected base.
+    git_status.status = function(path, base_lookup, skip_bubbling, opts)
+      local status, root, comparison = original_status(path, base_lookup, skip_bubbling, opts)
+      if comparison == nil and root and base_lookup and base_lookup[root] then
+        comparison = require("neo-tree.git.diff").diff_name_status(root, base_lookup[root], skip_bubbling)
+      end
+      return status, root, comparison
+    end
+    git_status._worktree_review_status = true
+  end
   vim.keymap.set("n", "<leader>gr", M.pick, { desc = "Review worktree" })
   vim.keymap.set("n", "<leader>gR", M.stop, { desc = "Stop worktree review" })
   vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
