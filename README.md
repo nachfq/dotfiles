@@ -116,9 +116,16 @@ uses the included `tokyonight-night` fallback. Generated Omarchy theme state is
 not committed, and theme selections are not propagated to remote environments.
 
 Neovim/Herdr selection and pane-navigation integrations require a running Herdr
-session with its CLI/socket available in the same environment. Copying these
-files alone does not connect a remote editor to a local Herdr session. Font zoom
-requires the laptop's Hyprland/Foot desktop; fonts and the terminal itself remain
+session with its CLI/socket available in the same environment. In Visual mode,
+`<leader>a` opens a card containing the selected code and space for feedback;
+in Normal mode it opens a message-only card. Choose a running Pi or Codex agent
+on first transfer, or change destination with `Ctrl+c`. `Enter` sends the comment
+and selection; `Ctrl+s` appends them to the destination's draft without submitting.
+Existing draft text is preserved. Busy agents, changed processes and unrecognized
+composers leave the card intact; unconfirmed transfers require checking the
+recipient before trying again. These are user prompts, not inter-agent messages.
+Copying these files alone does not connect a remote editor to a local Herdr
+session. Font zoom requires the laptop's Hyprland/Foot desktop; fonts and the terminal itself remain
 on the laptop. No desktop compositor is installed by this repository.
 The container uses the same Starship prompt and portable shell settings. Font
 rendering, terminal palette, padding and window appearance come from the local

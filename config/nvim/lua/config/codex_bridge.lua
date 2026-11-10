@@ -107,7 +107,7 @@ local function observe_selection(selection)
 end
 
 local function warn(message)
-  vim.notify(message, vim.log.levels.WARN, { title = "Codex / Herdr" })
+  vim.notify(message, vim.log.levels.WARN, { title = "Agents / Herdr" })
 end
 
 -- Use argv throughout: selected code and dictated text must never reach a shell.
@@ -143,34 +143,34 @@ local function session(agent)
 end
 
 local function identity(agent)
-  if not agent or agent.agent ~= "codex" then
-    error("This pane no longer contains Codex. Choose a destination again.")
+  if not agent or (agent.agent ~= "codex" and agent.agent ~= "pi") then
+    error("This pane no longer contains Pi or Codex. Choose a destination again.")
   end
   local info = call({ "pane", "process-info", "--pane", agent.pane_id }).process_info
   local pids = {}
   for _, process in ipairs(info.foreground_processes or {}) do
-    if process.name == "codex" or process.name:match("^codex%-") then
+    if process.name == agent.agent or process.name:match("^" .. agent.agent .. "%-") then
       pids[#pids + 1] = tostring(process.pid)
     end
   end
   if #pids == 0 then
-    error("Codex is not in the foreground in this pane.")
+    error("The agent is not in the foreground in this pane.")
   end
   table.sort(pids)
-  return { terminal = agent.terminal_id, pids = table.concat(pids, ","), session = session(agent) }
+  return { harness = agent.agent, terminal = agent.terminal_id, pids = table.concat(pids, ","), session = session(agent) }
 end
 
 local function validate(chosen)
   local agent = call({ "agent", "get", chosen.pane_id }).agent
   local now = identity(agent)
   if not vim.deep_equal(now, chosen.identity) then
-    error("The Codex process or session changed. Press Ctrl+c to choose it again.")
+    error("The agent process or session changed. Press Ctrl+c to choose it again.")
   end
   if agent.agent_status ~= "idle" and agent.agent_status ~= "done" then
-    error("Codex is busy or awaiting input. Your request is still here.")
+    error("The agent is busy or awaiting input. Your request is still here.")
   end
   if agent.interactive_ready == false then
-    error("Codex is not ready to receive text yet.")
+    error("The agent is not ready to receive text yet.")
   end
   return agent
 end
@@ -194,7 +194,7 @@ function M.choose(after)
       labels[workspace.workspace_id] = workspace.label or workspace.workspace_id
     end
     for _, agent in ipairs(agents) do
-      if agent.agent == "codex" then
+      if agent.agent == "codex" or agent.agent == "pi" then
         if not tabs[agent.workspace_id] then
           tabs[agent.workspace_id] = {}
           for _, tab in ipairs(call({ "tab", "list", "--workspace", agent.workspace_id }).tabs or {}) do
@@ -204,14 +204,15 @@ function M.choose(after)
         agent.bridge_label = table.concat({
           labels[agent.workspace_id] or agent.workspace_id,
           tabs[agent.workspace_id][agent.tab_id] or agent.tab_id,
-          agent.name or agent.terminal_title_stripped or "Codex",
+          agent.name or agent.terminal_title_stripped or agent.agent,
+          "[" .. agent.agent .. "]",
           agent.pane_id,
         }, " → ")
         options[#options + 1] = agent
       end
     end
     if #options == 0 then
-      error("Herdr found no running Codex agents.")
+      error("Herdr found no running Pi or Codex agents.")
     end
     table.sort(options, function(a, b)
       local a_local = a.workspace_id == vim.env.HERDR_WORKSPACE_ID
@@ -222,7 +223,7 @@ function M.choose(after)
       return a.bridge_label < b.bridge_label
     end)
     vim.ui.select(options, {
-      prompt = "Link this Neovim to Codex",
+      prompt = "Link this Neovim to Pi or Codex",
       format_item = function(item)
         return item.bridge_label .. " [" .. item.agent_status .. "]"
       end,
@@ -240,7 +241,7 @@ function M.choose(after)
         return true
       end)
       if linked and not after then
-        vim.notify("Linked to Codex: " .. target.label)
+        vim.notify("Linked to agent: " .. target.label)
       end
       complete(linked == true)
     end)
@@ -265,7 +266,37 @@ end
 -- Herdr has no structured draft API. Recognize the main composer by its
 -- prompt and footer; allow existing input so successive selections accumulate.
 -- Never clear or replace that input, and reject unrecognized dialogs/layouts.
-function M.composer_state(text)
+function M.composer_state(text, harness)
+  if harness == "pi" then
+    local lines = vim.split(text, "\n", { plain = true })
+    local function border(line)
+      local value = vim.trim(line):gsub(" ↑ %d+ more ", ""):gsub(" ↓ %d+ more ", "")
+      return #value >= 24 and value:gsub("─", "") == ""
+    end
+    -- Pi's normal editor is bounded by horizontal rules immediately above
+    -- its cwd/context footer. Fail closed for dialogs or unknown/custom editors.
+    for bottom = #lines - 2, 2, -1 do
+      local stats = lines[bottom + 2]
+      if border(lines[bottom]) and lines[bottom + 1]:match("^[~/]")
+        and (stats:match("[%d%.]+%%/[%d%.]+") or stats:match("%?/[%d%.]+"))
+      then
+        local content = false
+        for row = bottom - 1, 1, -1 do
+          if border(lines[row]) then
+            return content and "draft" or "empty"
+          end
+          local line = vim.trim(lines[row])
+          local lower = line:lower()
+          if lower:match("esc.*cancel") or lower:match("ctrl%+c.*cancel") then
+            return nil
+          end
+          content = content or line ~= ""
+        end
+        return nil
+      end
+    end
+    return nil
+  end
   local prompt
   local extra, model_footer = false, false
   for line in (text .. "\n"):gmatch("(.-)\n") do
@@ -298,8 +329,8 @@ function M.composer_state(text)
   return ((placeholders[prompt] or prompt == "") and not extra) and "empty" or "draft"
 end
 
-function M.empty_composer(text)
-  return M.composer_state(text) == "empty"
+function M.empty_composer(text, harness)
+  return M.composer_state(text, harness) == "empty"
 end
 
 function M.message(selection, instruction)
@@ -344,7 +375,7 @@ function M.transfer(submit)
   attempt(function()
     local request = draft
     if request.uncertain then
-      error("The previous transfer was not confirmed. Check Codex and close this request before trying again.")
+      error("The previous transfer was not confirmed. Check the agent and close this request before trying again.")
     end
     local instruction = vim.trim(table.concat(vim.api.nvim_buf_get_lines(request.buf, 0, -1, false), "\n"))
     if instruction == "" then
@@ -359,9 +390,9 @@ function M.transfer(submit)
     end
     validate(request.target)
     local screen = call({ "pane", "read", request.target.pane_id, "--source", "detection", "--lines", "100" }, true)
-    local composer = M.composer_state(screen)
+    local composer = M.composer_state(screen, request.target.identity.harness)
     if not composer then
-      error("Could not recognize the Codex composer. Check it; your request is still here.")
+      error("Could not recognize the agent composer. Check it; your request is still here.")
     end
     local text = M.message(request.selection, instruction):gsub("\r\n", "\n")
     if composer == "draft" then
@@ -389,7 +420,7 @@ function M.transfer(submit)
       -- Delivery failures can be ambiguous. Do not permit an accidental retry.
       request.sending = false
       request.uncertain = true
-      error("Herdr did not confirm delivery. Check Codex before trying again: " .. tostring(err))
+      error("Herdr did not confirm delivery. Check the agent before trying again: " .. tostring(err))
     end
     request.delivered = true
     -- Highlighting is best-effort after delivery; never turn a successful
@@ -398,7 +429,7 @@ function M.transfer(submit)
     hide()
     draft = nil
     vim.api.nvim_buf_delete(request.buf, { force = true })
-    vim.notify(submit and "Sent to Codex." or "Added to the Codex draft. Enter sends the next comment and the full draft.")
+    vim.notify(submit and "Sent to agent." or "Added to the agent draft. Enter sends the next comment and the full draft.")
   end)
 end
 
@@ -426,7 +457,7 @@ local function footer(request)
 end
 
 local function destination(request, width)
-  return "  To      " .. fit(request.target and request.target.label or "Not connected · choose when adding to Codex", width)
+  return "  To      " .. fit(request.target and request.target.label or "Not connected · choose Pi or Codex", width)
 end
 
 local function show()
@@ -475,7 +506,7 @@ local function show()
     width = width, height = height,
     row = math.max(0, math.floor((vim.o.lines - height) / 2) - 1),
     col = math.max(0, math.floor((vim.o.columns - width) / 2)),
-    title = " CODEX · " .. (selection and "Selection feedback" or "Message") .. " ", title_pos = "center", zindex = 60,
+    title = " AGENT · " .. (selection and "Selection feedback" or "Message") .. " ", title_pos = "center", zindex = 60,
     footer = footer(request), footer_pos = "center",
   })
   request.win = vim.api.nvim_open_win(request.buf, true, {
@@ -561,14 +592,14 @@ local function configure_request(buf)
     local submit = key == "<CR>"
     vim.keymap.set({ "n", "i" }, key, function()
       M.transfer(submit)
-    end, { buffer = buf, desc = submit and "Send comment and draft to Codex" or "Stage comment in Codex draft" })
+    end, { buffer = buf, desc = submit and "Send comment and draft to agent" or "Stage comment in agent draft" })
   end
   -- Non-recursive RHS: insert a real newline without invoking the Enter map.
   vim.keymap.set("i", "<S-CR>", "<CR>", { buffer = buf, desc = "Insert a new line" })
   vim.keymap.set("n", "<S-CR>", "o", { buffer = buf, desc = "Insert a new line" })
   vim.keymap.set({ "n", "i" }, "<C-c>", function()
     M.connect(false)
-  end, { buffer = buf, desc = "Change Codex connection" })
+  end, { buffer = buf, desc = "Change agent connection" })
   vim.keymap.set({ "n", "i" }, "<C-q>", M.discard, { buffer = buf, desc = "Close request" })
   vim.keymap.set("n", "q", M.discard, { buffer = buf, desc = "Close request" })
   local function placeholder()
@@ -675,10 +706,10 @@ function M.setup()
     attempt(function()
       M.compose(M.capture())
     end)
-  end, { desc = "Codex: comment on selection", nowait = true })
+  end, { desc = "Agent: comment on selection", nowait = true })
   vim.keymap.set("n", "<leader>a", function()
     M.compose()
-  end, { desc = "Codex: write feedback", nowait = true })
+  end, { desc = "Agent: write feedback", nowait = true })
 end
 
 return M
