@@ -28,6 +28,7 @@ assert(bridge.composer_state("Allow this tool?", "codex") == nil)
 
 local kind, status, pid, screen, failure = "pi", "idle", 100, pi_editor(""), false
 local sent, notices = {}, {}
+local listed, editor_pid = nil, vim.fn.getpid()
 vim.notify = function(text) notices[#notices + 1] = text end
 local function agent(harness)
   return { agent = harness, agent_status = status, interactive_ready = true,
@@ -45,13 +46,17 @@ end
 vim.system = function(argv)
   local result
   if argv[2] == "agent" and argv[3] == "list" then
-    result = { agents = { agent("pi"), agent("codex") } }
+    result = { agents = listed or { agent("pi"), agent("codex") } }
   elseif argv[2] == "workspace" then
     result = { workspaces = { { workspace_id = "workspace" } } }
   elseif argv[2] == "tab" then
     result = { tabs = { { tab_id = "tab" } } }
   elseif argv[2] == "agent" and argv[3] == "get" then
     result = { agent = agent(argv[4]) }
+  elseif argv[2] == "pane" and argv[3] == "list" then
+    result = { panes = { { pane_id = "editor", workspace_id = "workspace", tab_id = "tab" } } }
+  elseif argv[3] == "process-info" and argv[5] == "editor" then
+    result = { process_info = { foreground_processes = { { name = "nvim", pid = editor_pid } } } }
   elseif argv[3] == "process-info" then
     result = { process_info = { foreground_processes = { { name = kind, pid = pid } } } }
   elseif argv[3] == "read" then
@@ -119,6 +124,72 @@ for _, harness in ipairs({ "pi", "codex" }) do
   assert(#sent == 1) -- Uncertain delivery cannot be retried from the same card.
   bridge.discard()
 end
+vim.env.HERDR_ENV = "1"
+vim.env.HERDR_PANE_ID = "editor"
+vim.env.HERDR_TAB_ID = "stale-tab"
+vim.env.HERDR_WORKSPACE_ID = "stale-workspace"
+local choose = vim.ui.select
+vim.ui.select = function() error("A unique same-tab agent needs no picker") end
+local function fresh()
+  bridge.discard()
+  package.loaded["config.codex_bridge"] = nil
+  bridge = require("config.codex_bridge")
+  sent, notices = {}, {}
+  status, pid, failure = "idle", 100, false
+end
+for _, harness in ipairs({ "pi", "codex" }) do
+  fresh()
+  kind, screen, listed = harness, harness == "pi" and pi_editor("") or codex_empty, { agent(harness) }
+  listed[2] = agent(harness == "pi" and "codex" or "pi")
+  listed[2].tab_id = "another-tab"
+  bridge.compose()
+  assert(#sent == 0)
+  assert(vim.g.codex_bridge_target:find("[" .. harness .. "]", 1, true))
+  vim.api.nvim_buf_set_lines(vim.api.nvim_get_current_buf(), 0, -1, false, { "Automatic same-tab destination" })
+  bridge.transfer(true)
+  assert(#sent == 1 and sent[1][4] == harness)
+  -- A restarted agent is resolved again for the next request.
+  pid = 101
+  bridge.compose()
+  vim.api.nvim_buf_set_lines(vim.api.nvim_get_current_buf(), 0, -1, false, { "New process" })
+  bridge.transfer(true)
+  assert(#sent == 2)
+  -- A disappeared destination is not silently reused.
+  listed = {}
+  bridge.compose()
+  assert(vim.g.codex_bridge_target == nil)
+end
+fresh()
+listed = { agent("pi"), agent("codex") }
+bridge.compose()
+assert(vim.g.codex_bridge_target == nil and #sent == 0)
+fresh()
+listed = { agent("codex") }
+listed[1].tab_id = "another-tab"
+bridge.compose()
+assert(vim.g.codex_bridge_target == nil)
+fresh()
+listed = { agent("codex") }
+listed[1].workspace_id = "another-workspace"
+bridge.compose()
+assert(vim.g.codex_bridge_target == nil)
+fresh()
+listed, editor_pid = { agent("codex") }, -1
+bridge.compose()
+assert(vim.g.codex_bridge_target == nil)
+fresh()
+listed, editor_pid, kind = { agent("codex") }, vim.uv.os_getppid(), "codex"
+bridge.compose()
+assert(vim.g.codex_bridge_target:find("[codex]", 1, true))
+-- Explicit choices remain available and take precedence over auto-discovery.
+fresh()
+listed, editor_pid, kind = nil, vim.fn.getpid(), "codex"
+vim.ui.select = choose
+bridge.choose()
+listed = { agent("pi") }
+bridge.compose()
+assert(vim.g.codex_bridge_target:find("[codex]", 1, true))
+bridge.discard()
 print("Pi/Codex request-card checks passed")
 '''
 

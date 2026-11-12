@@ -118,8 +118,10 @@ not committed, and theme selections are not propagated to remote environments.
 Neovim/Herdr selection and pane-navigation integrations require a running Herdr
 session with its CLI/socket available in the same environment. In Visual mode,
 `<leader>a` opens a card containing the selected code and space for feedback;
-in Normal mode it opens a message-only card. Choose a running Pi or Codex agent
-on first transfer, or change destination with `Ctrl+c`. `Enter` sends the comment
+in Normal mode it opens a message-only card. A unique Pi or Codex agent in the
+editor's current Herdr tab is linked automatically. Multiple agents or no matching
+agent leave the destination unlinked until you choose one. Explicit choices are
+preserved; use `Ctrl+c` to choose or change the destination. `Enter` sends the comment
 and selection; `Ctrl+s` appends them to the destination's draft without submitting.
 Existing draft text is preserved. Busy agents, changed processes and unrecognized
 composers leave the card intact; unconfirmed transfers require checking the

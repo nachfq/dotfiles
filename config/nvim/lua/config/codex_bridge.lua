@@ -175,6 +175,66 @@ local function validate(chosen)
   return agent
 end
 
+function M.auto_target()
+  if target and not target.automatic then
+    return -- Keep an explicitly chosen destination.
+  end
+  target = nil
+  context.set_target(nil)
+  vim.g.codex_bridge_target = nil
+  if vim.env.HERDR_ENV ~= "1" or not vim.env.HERDR_PANE_ID then
+    return
+  end
+  attempt(function()
+    local source
+    for _, pane in ipairs(call({ "pane", "list" }).panes or {}) do
+      if pane.pane_id == vim.env.HERDR_PANE_ID then
+        source = pane
+        break
+      end
+    end
+    if not source then
+      return
+    end
+    local info = call({ "pane", "process-info", "--pane", source.pane_id }).process_info
+    local owns_pane = false
+    for _, process in ipairs(info.foreground_processes or {}) do
+      if process.name == "nvim"
+        and (process.pid == vim.fn.getpid() or process.pid == vim.uv.os_getppid())
+      then
+        owns_pane = true
+      end
+    end
+    if not owns_pane then
+      return -- Restored environment IDs can refer to another pane.
+    end
+    local candidates = {}
+    for _, agent in ipairs(call({ "agent", "list" }).agents or {}) do
+      if (agent.agent == "codex" or agent.agent == "pi")
+        and agent.workspace_id == source.workspace_id and agent.tab_id == source.tab_id
+      then
+        candidates[#candidates + 1] = agent
+      end
+    end
+    if #candidates ~= 1 then
+      return
+    end
+    local agent = candidates[1]
+    local live = call({ "agent", "get", agent.pane_id }).agent
+    if live.workspace_id ~= source.workspace_id or live.tab_id ~= source.tab_id then
+      return
+    end
+    target = {
+      pane_id = live.pane_id,
+      label = (live.name or live.terminal_title_stripped or live.agent) .. " [" .. live.agent .. "] → " .. live.pane_id,
+      identity = identity(live),
+      automatic = true,
+    }
+    context.set_target(target.pane_id)
+    vim.g.codex_bridge_target = target.label
+  end)
+end
+
 function M.choose(after)
   local finished = false
   local function complete(linked)
@@ -634,6 +694,7 @@ function M.compose(selection)
     show()
     return
   end
+  M.auto_target()
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = "hide"
   vim.bo[buf].swapfile = false
