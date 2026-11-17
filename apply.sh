@@ -59,7 +59,7 @@ prepare_spelling() (
   for extension in spl sug; do
     file="es.utf-8.$extension"
     if [[ ! -s "$spell_dir/$file" ]]; then
-      curl --fail --silent --show-error --location --retry 3 \
+      curl --http1.1 --fail --silent --show-error --location --retry 3 \
         "https://ftp.nluug.nl/pub/vim/runtime/spell/$file" -o "$temp_dir/$file"
       mv -- "$temp_dir/$file" "$spell_dir/$file"
     fi
